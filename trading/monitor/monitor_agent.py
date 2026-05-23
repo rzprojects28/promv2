@@ -152,7 +152,6 @@ def check_invalidation(position, current_price):
         msg = claude.messages.create(
             model='claude-opus-4-7',
             max_tokens=200,
-            temperature=0,
             system=(
                 "You are the Monitor Agent for Prometheus. Evaluate ONLY price-level invalidation "
                 "conditions against the provided current price. Do NOT use training memory, news "

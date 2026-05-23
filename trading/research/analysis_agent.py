@@ -12,8 +12,8 @@ CRITICAL DATA INJECTIONS (eliminates Claude hallucination):
 - TECHNICAL LEVELS (20d high/low, MA50, MA200) from yfinance
 
 v5 hardening:
-- temperature=0 for deterministic, fact-grounded output
-- system prompt cached via Anthropic ephemeral cache
+- system prompt cached via Anthropic ephemeral cache (Opus 4.7 deprecated
+  the temperature parameter — extended-thinking mode handles determinism)
 - Hard-fail when any live data source is empty (no silent guesswork)
 - Post-generation validator: rejects any thesis whose entry_price drifts
   from the live price, whose stop is not parseable, or whose ticker isn't
@@ -309,12 +309,11 @@ REQUIREMENTS:
 - Reference revision direction from ANALYST ESTIMATES section in your thesis text
 - If you cannot satisfy ALL of the above for a candidate, OMIT that thesis. Returning an empty array [] is acceptable."""
 
-    print("[Analysis Agent v5] Calling Claude API (temperature=0, system prompt cached)...")
+    print("[Analysis Agent v5] Calling Claude API (system prompt cached)...")
     try:
         msg = client.messages.create(
             model='claude-opus-4-7',
             max_tokens=3000,
-            temperature=0,
             system=[{
                 "type": "text",
                 "text": SYSTEM_PROMPT,
@@ -347,7 +346,6 @@ REQUIREMENTS:
             'generated_at':   datetime.now().isoformat(),
             'generated_date': today_str,
             'model':          'claude-opus-4-7',
-            'temperature':    0,
             'learning_mode':  learning_mode,
             'data_sources_used': {
                 'live_prices':       True,

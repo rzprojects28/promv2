@@ -103,7 +103,6 @@ Respond ONLY with valid JSON, no markdown:
         msg = claude.messages.create(
             model='claude-opus-4-7',
             max_tokens=500,
-            temperature=0,
             system=system_prompt,
             messages=[{'role': 'user', 'content': prompt}],
         )

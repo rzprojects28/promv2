@@ -325,7 +325,6 @@ JSON only: {{"invalidation_triggered":true/false,"condition_triggered":"..or nul
                 msg = claude.messages.create(
                     model='claude-opus-4-7',
                     max_tokens=200,
-                    temperature=0,
                     system=system_msg,
                     messages=[{'role':'user','content':prompt}],
                 )
@@ -381,8 +380,8 @@ def _run_journal(data_dir, config_path, learning_mode):
         print(f"  All trades reviewed ({len(journal)} total)")
         return
 
-    # Delegate to the canonical journal review (single source of truth, single prompt
-    # with the anti-hallucination system message + temperature=0).
+    # Delegate to the canonical journal review (single source of truth, single
+    # prompt with the anti-hallucination system message).
     from journal_agent import review_trade_with_claude
 
     for trade in new_trades:
