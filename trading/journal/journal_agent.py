@@ -34,12 +34,27 @@ def save_json(path, data):
 
 
 def review_trade_with_claude(trade):
-    """Generate a structured review of a single closed trade using Claude"""
-    prompt = f"""You are the Journal Agent for Prometheus, an AI prop trading system.
+    """
+    Generate a structured review of a single closed trade using Claude.
 
-Review this closed paper trade and extract structured lessons.
+    Scope: text-quality and PnL-shape judgments only. We do NOT ask the AI
+    to evaluate whether the real-world catalyst fired — there is no
+    post-trade market data injected here, so any such judgement would be a
+    guess from training memory.
+    """
+    system_prompt = (
+        "You are the Journal Agent for Prometheus, an AI prop trading system. "
+        "Critically: you have ONLY the trade record in front of you. You do NOT have "
+        "post-trade news, sector data, earnings results, or charts. Restrict your "
+        "judgments to things you can derive from the record itself (PnL sign and "
+        "magnitude, text quality of the thesis/invalidation, exit reason wording). "
+        "Do NOT use training memory to infer what happened in the market. "
+        "For anything outside what the record supports, use UNKNOWN."
+    )
 
-TRADE DATA:
+    prompt = f"""Review this closed paper trade. Return only valid JSON.
+
+TRADE RECORD (this is everything you have — do not infer beyond it):
 Ticker:       {trade.get('ticker')}
 Direction:    {trade.get('direction')}
 Conviction:   {trade.get('conviction')}
@@ -50,32 +65,31 @@ Entry price:  ${trade.get('entry_price')}
 Exit price:   ${trade.get('exit_price')}
 P&L:          {trade.get('pnl_pct')}%
 Exit reason:  {trade.get('exit_reason')}
-Learning mode: {trade.get('learning_mode', 'no_learning')}
 
-ORIGINAL THESIS:
+ORIGINAL THESIS (verbatim):
 {trade.get('core_thesis', 'Not available')}
 
-CATALYST:
+CATALYST (verbatim, as set at entry — we do NOT have post-trade verification):
 {trade.get('catalyst', 'Not available')}
 
-INVALIDATION CONDITIONS:
+INVALIDATION CONDITIONS (verbatim):
 {trade.get('invalidation_conditions', 'Not available')}
 
-ANALYSIS TASK:
-1. Was the thesis directionally correct? (YES/NO/PARTIAL)
-2. Did the expected catalyst fire? (YES/NO/UNKNOWN)
-3. Was the invalidation condition well-defined or too vague?
-4. What was the single most important lesson from this trade?
-5. What pattern tags apply? Choose from: sector_leadership, earnings_catalyst,
-   dark_pool_confirmation, institutional_accumulation, high_conviction_win,
-   high_conviction_loss, medium_conviction_win, medium_conviction_loss,
-   early_exit, late_exit, good_timing, bad_timing, thesis_too_vague,
-   thesis_well_defined, stop_worked, stop_missed
+TASK:
+1. thesis_accurate — derive from PnL sign + direction. (YES if PnL agrees with direction, NO if opposite, PARTIAL if marginal)
+2. invalidation_quality — judge the TEXT of the invalidation condition. (CLEAR if it contains a specific price level; VAGUE if narrative-only; NOT_APPLICABLE if missing)
+3. verdict — bucket the outcome by PnL magnitude. (STRONG_WIN >5%, WEAK_WIN 0-5%, WEAK_LOSS -5-0%, STRONG_LOSS <-5%; NEUTRAL only if flat)
+4. key_lesson — ONE sentence drawn from the exit_reason and PnL. Do not invent a market narrative.
+5. pattern_tags — choose ONLY from this fixed set:
+   sector_leadership, earnings_catalyst, dark_pool_confirmation,
+   institutional_accumulation, high_conviction_win, high_conviction_loss,
+   medium_conviction_win, medium_conviction_loss, early_exit, late_exit,
+   good_timing, bad_timing, thesis_too_vague, thesis_well_defined,
+   stop_worked, stop_missed
 
 Respond ONLY with valid JSON, no markdown:
 {{
   "thesis_accurate": "YES" or "NO" or "PARTIAL",
-  "catalyst_fired": "YES" or "NO" or "UNKNOWN",
   "invalidation_quality": "CLEAR" or "VAGUE" or "NOT_APPLICABLE",
   "verdict": "STRONG_WIN" or "WEAK_WIN" or "NEUTRAL" or "WEAK_LOSS" or "STRONG_LOSS",
   "key_lesson": "one sentence maximum",
@@ -89,14 +103,15 @@ Respond ONLY with valid JSON, no markdown:
         msg = claude.messages.create(
             model='claude-opus-4-7',
             max_tokens=500,
-            messages=[{'role': 'user', 'content': prompt}]
+            temperature=0,
+            system=system_prompt,
+            messages=[{'role': 'user', 'content': prompt}],
         )
         return json.loads(msg.content[0].text.strip())
     except Exception as e:
         print(f"    Claude review error: {e}")
         return {
             'thesis_accurate': 'UNKNOWN',
-            'catalyst_fired': 'UNKNOWN',
             'invalidation_quality': 'UNKNOWN',
             'verdict': 'NEUTRAL',
             'key_lesson': f'Review failed: {e}',

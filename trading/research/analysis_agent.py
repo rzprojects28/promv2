@@ -1,5 +1,5 @@
 """
-Prometheus Phase 2 — Analysis Agent (v4)
+Prometheus Phase 2 — Analysis Agent (v5)
 Synthesises research data and generates ITPM-style trade theses via Claude API.
 
 CRITICAL DATA INJECTIONS (eliminates Claude hallucination):
@@ -7,9 +7,18 @@ CRITICAL DATA INJECTIONS (eliminates Claude hallucination):
 - LIVE PRICES from IBKR for all candidate tickers
 - UPCOMING EARNINGS CALENDAR from FMP API
 - EXACT OPTIONS EXPIRY DATES for 45-60 DTE window
-- LIVE IMPLIED VOLATILITY from IBKR options chain (v4)
-- ANALYST EPS REVISION DIRECTION from FMP (v4)
-- TECHNICAL LEVELS (20d high/low, MA50, MA200) from yfinance (v4)
+- LIVE IMPLIED VOLATILITY from IBKR options chain
+- ANALYST EPS REVISION DIRECTION from FMP
+- TECHNICAL LEVELS (20d high/low, MA50, MA200) from yfinance
+
+v5 hardening:
+- temperature=0 for deterministic, fact-grounded output
+- system prompt cached via Anthropic ephemeral cache
+- Hard-fail when any live data source is empty (no silent guesswork)
+- Post-generation validator: rejects any thesis whose entry_price drifts
+  from the live price, whose stop is not parseable, or whose ticker isn't
+  in the live data dict
+- Explicit "return UNKNOWN, do not use training memory" guardrail
 """
 import json
 import os
@@ -77,7 +86,11 @@ You have been given LIVE DATA at the top of this prompt. You MUST use it for eve
 - UPCOMING EARNINGS DATES are provided — use these for catalyst dates (NEVER reference past earnings)
 - OPTIONS EXPIRY WINDOW is provided — use these dates (NEVER reference past months or years)
 
-If data is missing for a ticker, say so explicitly. Do NOT fill gaps from your training memory.
+ANTI-HALLUCINATION POLICY (CRITICAL):
+- If the data provided does not contain enough information to answer confidently, OMIT that trade idea or note "INSUFFICIENT DATA" in the relevant field. Do NOT use general knowledge or training memory to fill gaps.
+- If you cannot find a ticker in the LIVE PRICES block, do NOT propose a trade on it.
+- If TECHNICAL LEVELS does not have a suggested stop for a ticker, do NOT propose a trade on it.
+- Returning ZERO theses is acceptable when the data does not support 2+ signal convergence.
 
 Core ITPM rules:
 - Long the BEST individual stocks in the BEST sectors.
@@ -106,6 +119,13 @@ POSITION SIZING — ITPM METHOD:
 - Use stop price from the TECHNICAL LEVELS suggested stop (or tighter if catalyst-specific)
 - Risk Manager calculates: Max loss = 0.5% of portfolio / Risk per share = Entry - Stop
 
+INVALIDATION FORMAT (MANDATORY — parser requirement):
+The downstream risk manager extracts the stop price from invalidation_conditions via regex.
+Your invalidation_conditions text MUST contain a numeric price level in one of these forms:
+  "$118.50"  |  "below 118"  |  "under 118.50"  |  "118 support"  |  "breaks 118"
+The matched price must be within 30% of entry_price (sanity gate).
+If you cannot supply a price level from the TECHNICAL LEVELS block, DROP the thesis. Do not propose a trade without a parseable stop — the risk manager will fall back to oversized conviction-based sizing with no stop loss, which is unsafe.
+
 Output fields per trade (ALL required):
 - ticker
 - direction (LONG or SHORT)
@@ -115,12 +135,17 @@ Output fields per trade (ALL required):
 - core_thesis (must reference specific live data points — sectors, EPS revisions, IV, technical setup)
 - catalyst (MUST use the upcoming earnings dates from the calendar provided)
 - options_structure (MUST use the IV regime and expiry dates provided)
-- invalidation_conditions (MUST include specific price level from TECHNICAL LEVELS block)
+- invalidation_conditions (MUST include specific price level — see INVALIDATION FORMAT above)
 - hard_time_limit (calculate as TODAY + N weeks, show the actual ISO date)
 - position_size_pct (HIGH=4%, MEDIUM=3%, LOW=2%)
 
-Generate 2-3 ideas. Only where 2+ signals align.
+Generate 2-3 ideas. Only where 2+ signals align. Return an empty array if no thesis meets the bar.
 Respond ONLY with valid JSON array. No markdown. No preamble."""
+
+
+# Validator + stop extractor live in their own module so they're unit-testable
+# without importing the Anthropic SDK or dotenv.
+from analysis_validator import validate_thesis as _validate_thesis  # noqa: F401
 
 
 def load_data():
@@ -180,56 +205,79 @@ def build_research_prompt(data: dict) -> str:
     return '\n'.join(parts)
 
 
+def _write_empty_theses(data_dir: str, today_str: str, reason: str, learning_mode: str) -> dict:
+    """Write a marker file when we refuse to call the API due to missing data."""
+    os.makedirs(data_dir, exist_ok=True)
+    output = {
+        'generated_at':   datetime.now().isoformat(),
+        'generated_date': today_str,
+        'model':          'claude-opus-4-7',
+        'learning_mode':  learning_mode,
+        'data_missing':   reason,
+        'theses':         [],
+    }
+    with open(os.path.join(data_dir, 'trade_theses.json'), 'w') as f:
+        json.dump(output, f, indent=2)
+    return output
+
+
 def run(learning_mode: str = 'no_learning', learning_insights: str = ''):
     today_str = datetime.now().strftime('%Y-%m-%d')
-    print(f"[Analysis Agent v4] {today_str} | Mode: {learning_mode}")
+    data_dir  = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+    print(f"[Analysis Agent v5] {today_str} | Mode: {learning_mode}")
 
     data = load_data()
     if not data:
-        print("[Analysis Agent v4] No research data found. Run Phase 2 pipeline first.")
-        return None
+        print("[Analysis Agent v5] No research data found. Run Phase 2 pipeline first.")
+        return _write_empty_theses(data_dir, today_str,
+                                   "research data missing (sector_ranking, etc.)", learning_mode)
 
     research_prompt = build_research_prompt(data)
 
-    live_prices_block    = ""
-    earnings_block       = ""
-    options_expiry_block = ""
-    iv_block             = ""
-    estimates_block      = ""
-    technicals_block     = ""
-
+    # ── Candidates ─────────────────────────────────────────────────────
     candidates = []
     if LIVE_DATA_AVAILABLE:
         sector_data = data.get('sector_ranking', {})
         uw_data     = data.get('unusual_whales_flow', {})
         candidates  = extract_candidate_tickers(sector_data, uw_data)
 
-    if LIVE_DATA_AVAILABLE and candidates:
-        print(f"[Analysis Agent v4] Fetching live prices for {len(candidates)} tickers...")
-        prices = fetch_prices(candidates)
-        live_prices_block = format_prices_for_prompt(prices)
+    if not candidates:
+        msg = "no candidate tickers extracted from sector + flow data"
+        print(f"[Analysis Agent v5] HARD FAIL — {msg}")
+        return _write_empty_theses(data_dir, today_str, msg, learning_mode)
 
-    if LIVE_DATA_AVAILABLE:
-        print("[Analysis Agent v4] Fetching earnings calendar...")
-        calendar             = get_earnings_calendar(45)
-        earnings_block       = format_earnings_for_prompt(calendar, candidates)
-        options_expiry_block = format_options_expiry_dates()
+    # ── Live data fetches (HARD FAIL if any required source is empty) ──
+    if not LIVE_DATA_AVAILABLE:
+        msg = "price_fetcher / earnings_calendar modules unavailable — cannot generate fact-grounded theses"
+        print(f"[Analysis Agent v5] HARD FAIL — {msg}")
+        return _write_empty_theses(data_dir, today_str, msg, learning_mode)
 
-    if IV_DATA_AVAILABLE and candidates:
-        print(f"[Analysis Agent v4] Fetching live IV for {len(candidates[:10])} tickers...")
-        iv_data  = fetch_iv_data(candidates[:10])
-        iv_block = format_iv_for_prompt(iv_data)
+    print(f"[Analysis Agent v5] Fetching live prices for {len(candidates)} tickers...")
+    prices = fetch_prices(candidates)
+    priced = {k: v for k, v in (prices or {}).items() if v and v.get('price')}
+    if not priced:
+        msg = f"IBKR + yfinance both returned no prices for any of {candidates[:5]}..."
+        print(f"[Analysis Agent v5] HARD FAIL — {msg}")
+        return _write_empty_theses(data_dir, today_str, msg, learning_mode)
+    live_prices_block = format_prices_for_prompt(priced)
 
-    if ESTIMATES_AVAILABLE and candidates:
-        print(f"[Analysis Agent v4] Fetching analyst EPS estimates...")
-        estimates       = fetch_analyst_estimates(candidates[:10])
-        estimates_block = format_estimates_for_prompt(estimates)
+    print("[Analysis Agent v5] Fetching earnings calendar...")
+    calendar             = get_earnings_calendar(45)
+    earnings_block       = format_earnings_for_prompt(calendar, candidates)
+    options_expiry_block = format_options_expiry_dates()
 
-    if TECHNICALS_AVAILABLE and candidates:
-        print(f"[Analysis Agent v4] Fetching technical levels...")
-        levels           = fetch_technical_levels(candidates[:10])
-        technicals_block = format_levels_for_prompt(levels)
+    iv_block = estimates_block = technicals_block = ""
+    if IV_DATA_AVAILABLE:
+        print(f"[Analysis Agent v5] Fetching live IV for {len(candidates[:10])} tickers...")
+        iv_block = format_iv_for_prompt(fetch_iv_data(candidates[:10]))
+    if ESTIMATES_AVAILABLE:
+        print(f"[Analysis Agent v5] Fetching analyst EPS estimates...")
+        estimates_block = format_estimates_for_prompt(fetch_analyst_estimates(candidates[:10]))
+    if TECHNICALS_AVAILABLE:
+        print(f"[Analysis Agent v5] Fetching technical levels...")
+        technicals_block = format_levels_for_prompt(fetch_technical_levels(candidates[:10]))
 
+    # ── Build full prompt ──────────────────────────────────────────────
     full_prompt = f"""TODAY'S DATE: {today_str}
 IMPORTANT: Use this date for ALL calculations. Do not use any dates from your training memory.
 
@@ -252,21 +300,27 @@ IMPORTANT: Use this date for ALL calculations. Do not use any dates from your tr
 Generate 2-3 high-conviction ITPM trade theses as a JSON array.
 
 REQUIREMENTS:
-- entry_price MUST come from LIVE PRICES section
-- Stop price in invalidation_conditions MUST come from TECHNICAL LEVELS section
+- entry_price MUST come from LIVE PRICES section (exact match to that ticker's price)
+- Stop price in invalidation_conditions MUST be a numeric level parseable as "$X" or "below X" — from TECHNICAL LEVELS
 - Options structure MUST use IV regime from IV DATA section
 - Catalyst MUST reference real earnings dates from EARNINGS CALENDAR section
 - Options expiry MUST be from OPTIONS EXPIRY WINDOW section
 - All dates MUST be calculated from TODAY'S DATE
-- Reference revision direction from ANALYST ESTIMATES section in your thesis text"""
+- Reference revision direction from ANALYST ESTIMATES section in your thesis text
+- If you cannot satisfy ALL of the above for a candidate, OMIT that thesis. Returning an empty array [] is acceptable."""
 
-    print("[Analysis Agent v4] Calling Claude API (waits for full response — typically 30-90 seconds)...")
+    print("[Analysis Agent v5] Calling Claude API (temperature=0, system prompt cached)...")
     try:
         msg = client.messages.create(
             model='claude-opus-4-7',
             max_tokens=3000,
-            system=SYSTEM_PROMPT,
-            messages=[{'role': 'user', 'content': full_prompt}]
+            temperature=0,
+            system=[{
+                "type": "text",
+                "text": SYSTEM_PROMPT,
+                "cache_control": {"type": "ephemeral"},
+            }],
+            messages=[{'role': 'user', 'content': full_prompt}],
         )
         raw = msg.content[0].text.strip()
 
@@ -276,51 +330,57 @@ REQUIREMENTS:
             match  = re.search(r'\[.*\]', raw, re.DOTALL)
             theses = json.loads(match.group()) if match else [{'raw_output': raw}]
 
-        for thesis in theses:
-            thesis['learning_mode']  = learning_mode
-            thesis['generated_date'] = today_str
+        # ── POST-GENERATION VALIDATION (drop hallucinated theses) ──
+        validated, rejected = [], []
+        for t in theses:
+            ok, reason = _validate_thesis(t, priced)
+            if ok:
+                t['learning_mode']  = learning_mode
+                t['generated_date'] = today_str
+                validated.append(t)
+            else:
+                rejected.append({'thesis': t, 'rejection_reason': reason})
+                print(f"  ✗ REJECTED: {reason}")
 
         ts     = datetime.now().strftime('%Y%m%d_%H%M')
         output = {
             'generated_at':   datetime.now().isoformat(),
             'generated_date': today_str,
             'model':          'claude-opus-4-7',
+            'temperature':    0,
             'learning_mode':  learning_mode,
             'data_sources_used': {
-                'live_prices':       LIVE_DATA_AVAILABLE,
-                'earnings_calendar': LIVE_DATA_AVAILABLE,
+                'live_prices':       True,
+                'earnings_calendar': True,
                 'iv_data':           IV_DATA_AVAILABLE,
                 'analyst_estimates': ESTIMATES_AVAILABLE,
                 'technical_levels':  TECHNICALS_AVAILABLE,
             },
-            'theses': theses,
+            'theses':                validated,
+            'rejected_by_validator': rejected,
             'research_snapshot': {
                 'top_sectors':      data.get('sector_ranking', {}).get('top_sectors', [])[:3],
                 'darkpool_tickers': data.get('unusual_whales_flow', {}).get('summary', {}).get('top_darkpool_tickers', []),
                 'flow_tickers':     data.get('unusual_whales_flow', {}).get('summary', {}).get('top_flow_tickers', []),
-            }
+            },
         }
 
-        data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
         os.makedirs(data_dir, exist_ok=True)
         with open(os.path.join(data_dir, 'trade_theses.json'), 'w') as f:
             json.dump(output, f, indent=2)
         with open(os.path.join(data_dir, f'trade_theses_{ts}.json'), 'w') as f:
             json.dump(output, f, indent=2)
 
-        print(f"\n[Analysis Agent v4] Complete — {len(theses)} trade ideas")
-        print(f"  Data sources: prices={LIVE_DATA_AVAILABLE} | iv={IV_DATA_AVAILABLE} | "
-              f"estimates={ESTIMATES_AVAILABLE} | technicals={TECHNICALS_AVAILABLE}")
-        for i, t in enumerate(theses):
-            if isinstance(t, dict) and 'ticker' in t:
-                ep = t.get('entry_price', '?')
-                print(f"  {i+1}. {t.get('ticker')} {t.get('direction')} [{t.get('conviction')}] entry:${ep}")
+        print(f"\n[Analysis Agent v5] Complete — {len(validated)} validated theses, {len(rejected)} rejected")
+        for i, t in enumerate(validated):
+            ep = t.get('entry_price', '?')
+            print(f"  {i+1}. {t.get('ticker')} {t.get('direction')} [{t.get('conviction')}] entry:${ep}")
 
         return output
 
     except Exception as e:
-        print(f"[Analysis Agent v4] ERROR: {e}")
-        return None
+        print(f"[Analysis Agent v5] ERROR: {e}")
+        return _write_empty_theses(data_dir, today_str, f"API call failed: {e}", learning_mode)
 
 
 if __name__ == '__main__':

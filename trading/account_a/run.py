@@ -305,14 +305,30 @@ def _run_monitor(data_dir):
 
         if not exit_reason:
             try:
-                prompt = f"""Monitor Agent check.
+                system_msg = (
+                    "You are the Monitor Agent for Prometheus. Evaluate ONLY price-level "
+                    "invalidation conditions against the provided current price. Do NOT use "
+                    "training memory, news intuition, or any data not in the prompt. "
+                    "Narrative-only or ambiguous conditions → return false. Bias is to HOLD."
+                )
+                prompt = f"""Invalidation check.
 Ticker: {ticker} | Direction: {position.get('direction')} | P&L: {pnl:+.1f}%
-Invalidation: {position.get('invalidation_conditions','')}
+Invalidation conditions (verbatim): {position.get('invalidation_conditions','')}
 Current price: ${current:.2f} | Entry: ${entry_price}
-Has any invalidation condition been triggered? JSON only:
-{{"invalidation_triggered":true/false,"condition_triggered":"..or null","recommended_action":"HOLD or EXIT"}}"""
-                msg = claude.messages.create(model='claude-opus-4-7', max_tokens=200,
-                                             messages=[{'role':'user','content':prompt}])
+
+Has a PRICE-LEVEL invalidation been clearly breached by the current price?
+- Only trigger on numeric price thresholds that have crossed.
+- Narrative-only conditions → false.
+- Ambiguous → false.
+
+JSON only: {{"invalidation_triggered":true/false,"condition_triggered":"..or null","recommended_action":"HOLD or EXIT"}}"""
+                msg = claude.messages.create(
+                    model='claude-opus-4-7',
+                    max_tokens=200,
+                    temperature=0,
+                    system=system_msg,
+                    messages=[{'role':'user','content':prompt}],
+                )
                 result = json.loads(msg.content[0].text.strip())
                 if result.get('invalidation_triggered') and result.get('recommended_action') == 'EXIT':
                     exit_reason = result.get('condition_triggered', 'Invalidation triggered')
@@ -365,19 +381,14 @@ def _run_journal(data_dir, config_path, learning_mode):
         print(f"  All trades reviewed ({len(journal)} total)")
         return
 
-    claude = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
+    # Delegate to the canonical journal review (single source of truth, single prompt
+    # with the anti-hallucination system message + temperature=0).
+    from journal_agent import review_trade_with_claude
+
     for trade in new_trades:
         trade_id = f"{trade.get('ticker')}_{trade.get('entry_date')}"
         try:
-            msg = claude.messages.create(
-                model='claude-opus-4-7', max_tokens=400,
-                messages=[{'role':'user','content':f"""Review this closed trade as Prometheus Journal Agent.
-Ticker:{trade.get('ticker')} Direction:{trade.get('direction')} P&L:{trade.get('pnl_pct')}%
-Thesis:{trade.get('core_thesis','')} Exit reason:{trade.get('exit_reason','')}
-Respond JSON only: {{"verdict":"STRONG_WIN/WEAK_WIN/NEUTRAL/WEAK_LOSS/STRONG_LOSS",
-"key_lesson":"one sentence","pattern_tags":["tag1"],"repeat_this_setup":true/false,
-"thesis_accurate":"YES/NO/PARTIAL","catalyst_fired":"YES/NO/UNKNOWN"}}"""}])
-            review = json.loads(msg.content[0].text.strip())
+            review = review_trade_with_claude(trade)
         except Exception as e:
             review = {'verdict':'NEUTRAL','key_lesson':str(e),'pattern_tags':[],'repeat_this_setup':False}
 

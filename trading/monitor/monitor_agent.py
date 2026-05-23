@@ -118,48 +118,28 @@ def check_stop_price(position, current_price):
 
 
 def check_catalyst_exit(position, current_price, pnl_pct):
-    if pnl_pct < CATALYST_EXIT_MIN_GAIN_PCT:
-        return False, None
+    """
+    Profit-taking gate. Rule-based only (no AI catalyst-fired judgement —
+    the agent had no real-world data to evaluate that and would guess from
+    PnL alone). Exit when gain >= CATALYST_EXIT_STRONG_GAIN_PCT.
+    """
     if pnl_pct >= CATALYST_EXIT_STRONG_GAIN_PCT:
         return True, (f"Strong catalyst payoff: position up {pnl_pct:.1f}% — "
-                      f"taking profit at >{CATALYST_EXIT_STRONG_GAIN_PCT}% threshold")
-    catalyst = position.get('catalyst', '')
-    if not catalyst:
-        return False, None
-    try:
-        days_held = (datetime.now() - datetime.strptime(
-            position.get('entry_date', '2026-01-01'), '%Y-%m-%d')).days
-    except Exception:
-        days_held = 0
-    try:
-        msg = claude.messages.create(
-            model='claude-opus-4-7',
-            max_tokens=200,
-            messages=[{'role': 'user', 'content': f"""Monitor Agent — catalyst exit check.
-
-{position.get('ticker')} {position.get('direction')} | P&L {pnl_pct:+.1f}% | {days_held} days held
-Entry: ${position.get('entry_price')} | Current: ${current_price:.2f}
-
-CATALYST: {catalyst}
-THESIS: {position.get('core_thesis', '')}
-
-Has the catalyst fired and thesis played out? Be conservative — only EXIT if move strongly confirms catalyst.
-JSON only: {{"catalyst_fired": true/false, "reasoning": "1 sentence", "recommended_action": "HOLD or EXIT"}}"""}]
-        )
-        result = json.loads(msg.content[0].text.strip())
-        if result.get('catalyst_fired') and result.get('recommended_action') == 'EXIT':
-            return True, f"Catalyst exit: {result.get('reasoning')} (P&L: {pnl_pct:+.1f}%)"
-    except Exception as e:
-        print(f"    Catalyst check error: {e}")
+                      f"taking profit at >={CATALYST_EXIT_STRONG_GAIN_PCT}% threshold")
     return False, None
 
 
 def check_invalidation(position, current_price):
+    """
+    Ask the AI to evaluate whether a price-level invalidation has been
+    breached. Limited to facts the AI can verify from the given data
+    (current price vs stated levels). The system prompt forbids inference
+    from training memory; ambiguous cases must return UNKNOWN/HOLD.
+    """
     ticker      = position.get('ticker', '')
     direction   = position.get('direction', '')
     entry_price = float(position.get('entry_price', 0))
     conditions  = position.get('invalidation_conditions', '')
-    thesis      = position.get('core_thesis', '')
     pnl_pct     = ((current_price - entry_price) / entry_price * 100) if entry_price else 0
     if direction == 'SHORT':
         pnl_pct = -pnl_pct
@@ -172,17 +152,27 @@ def check_invalidation(position, current_price):
         msg = claude.messages.create(
             model='claude-opus-4-7',
             max_tokens=200,
-            messages=[{'role': 'user', 'content': f"""Monitor Agent — invalidation check.
+            temperature=0,
+            system=(
+                "You are the Monitor Agent for Prometheus. Evaluate ONLY price-level invalidation "
+                "conditions against the provided current price. Do NOT use training memory, news "
+                "intuition, or any data not in the prompt. If the condition is narrative (no specific "
+                "price), or the data is ambiguous, return invalidation_triggered=false and "
+                "recommended_action=HOLD. Bias is to HOLD unless a clearly breached price level is present."
+            ),
+            messages=[{'role': 'user', 'content': f"""Invalidation check.
 
 {ticker} {direction} | Entry ${entry_price} | Current ${current_price:.2f} | P&L {pnl_pct:+.1f}% | {days_held} days held
 
-Invalidation conditions (exit immediately if triggered):
+Invalidation conditions (verbatim):
 {conditions}
 
-Original thesis: {thesis}
+Has a PRICE-LEVEL invalidation condition been clearly breached by the current price?
+- Only mark triggered if a numeric price threshold in the conditions has been crossed.
+- Narrative-only conditions ("if sector reverses", "if catalyst weakens") → return false. You do not have sector or catalyst data here.
+- Ambiguous → return false.
 
-Has any invalidation condition been triggered? Be strict — if a price level is clearly breached, mark it triggered.
-JSON only: {{"invalidation_triggered": true/false, "condition_triggered": "description or null", "recommended_action": "HOLD or EXIT"}}"""}]
+JSON only: {{"invalidation_triggered": true/false, "condition_triggered": "<exact text or null>", "recommended_action": "HOLD or EXIT"}}"""}]
         )
         result = json.loads(msg.content[0].text.strip())
         if result.get('invalidation_triggered') and result.get('recommended_action') == 'EXIT':
@@ -294,8 +284,8 @@ def run(data_dir=None, ib_port=None, ib_client_id=None):
             if triggered:
                 exit_reason, exit_category = reason, 'stop_price'
 
-        # 4. Catalyst profit exit
-        if not exit_reason and pnl_pct >= CATALYST_EXIT_MIN_GAIN_PCT:
+        # 4. Profit-take threshold (rule-based, no AI judgment)
+        if not exit_reason:
             triggered, reason = check_catalyst_exit(position, current_price, pnl_pct)
             if triggered:
                 exit_reason, exit_category = reason, 'catalyst_exit'
