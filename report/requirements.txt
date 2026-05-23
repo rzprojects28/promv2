@@ -1,0 +1,12 @@
+# Runtime deps for the reporting package.
+# Install with: pip install -r reporting/requirements.txt
+#
+# Tested with Python 3.9+ (zoneinfo is stdlib from 3.9 onwards).
+#
+# These match what the trading strategy already uses, so on the VPS where
+# run_parallel.py works, all four are typically already installed.
+
+python-dotenv>=1.0.0   # loads ~/prometheus/.env (optional — falls back to os.environ if missing)
+requests>=2.31.0       # Telegram HTTP POST (required to actually send messages)
+ib_insync>=0.9.86      # IBKR live prices and NetLiquidation (optional — uses yfinance fallback if missing)
+yfinance>=0.2.0        # price fallback when IBKR is unreachable (optional)

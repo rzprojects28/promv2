@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plotus — AI Trading Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --brand:        #5C53B7;
+    --brand-light:  #EEEDFE;
+    --brand-mid:    #7B74CC;
+    --green:        #16A34A;
+    --green-light:  #DCFCE7;
+    --red:          #DC2626;
+    --red-light:    #FEE2E2;
+    --amber:        #D97706;
+    --amber-light:  #FEF3C7;
+    --blue:         #2563EB;
+    --blue-light:   #DBEAFE;
+    --purple:       #7C3AED;
+    --purple-light: #EDE9FE;
+    --bg:           #F8F9FC;
+    --surface:      #FFFFFF;
+    --border:       #E5E7EB;
+    --border-light: #F3F4F6;
+    --text:         #111827;
+    --text-2:       #374151;
+    --text-3:       #6B7280;
+    --text-4:       #9CA3AF;
+    --shadow-sm:    0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+    --shadow-md:    0 4px 12px rgba(0,0,0,.06), 0 2px 4px rgba(0,0,0,.04);
+    --radius:       10px;
+    --radius-sm:    6px;
+    --radius-lg:    14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif; font-size: 14px; line-height: 1.5; }
+
+  /* NAV */
+  nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 28px; height: 60px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow-sm); }
+  .nav-left { display: flex; align-items: center; gap: 12px; }
+  .logo-icon { width: 34px; height: 34px; background: var(--brand); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  .logo-icon svg { width: 18px; height: 18px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; }
+  .logo-text { font-size: 16px; font-weight: 600; color: var(--text); letter-spacing: -0.01em; }
+  .logo-sub { font-size: 12px; color: var(--text-3); margin-top: 1px; }
+  .nav-right { display: flex; align-items: center; gap: 16px; }
+  .badge-live { display: flex; align-items: center; gap: 6px; background: var(--green-light); color: var(--green); font-size: 12px; font-weight: 500; padding: 5px 12px; border-radius: 99px; }
+  .pulse { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.85)} }
+  .badge-paper { background: var(--amber-light); color: var(--amber); font-size: 12px; font-weight: 500; padding: 5px 12px; border-radius: 99px; }
+  .last-run { font-size: 12px; color: var(--text-3); }
+
+  /* LAYOUT */
+  .page { max-width: 1320px; margin: 0 auto; padding: 28px; }
+  .section-title { font-size: 13px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 14px; margin-top: 28px; }
+  .section-title:first-child { margin-top: 0; }
+
+  /* METRIC CARDS */
+  .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .metric-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; box-shadow: var(--shadow-sm); }
+  .metric-label { font-size: 12px; color: var(--text-3); font-weight: 500; margin-bottom: 8px; }
+  .metric-value { font-size: 26px; font-weight: 700; color: var(--text); letter-spacing: -0.02em; line-height: 1; }
+  .metric-sub { font-size: 12px; color: var(--text-3); margin-top: 6px; }
+  .metric-target { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; padding: 2px 7px; border-radius: 99px; margin-top: 6px; font-weight: 500; }
+  .target-pass { background: var(--green-light); color: var(--green); }
+  .target-fail { background: var(--red-light); color: var(--red); }
+  .target-neutral { background: var(--border-light); color: var(--text-3); }
+  .val-pos { color: var(--green); }
+  .val-neg { color: var(--red); }
+
+  /* A/B SECTION */
+  .ab-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  .ab-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm); overflow: hidden; }
+  .ab-card-header { padding: 14px 18px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border-light); }
+  .ab-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .ab-dot-a { background: #9CA3AF; }
+  .ab-dot-b { background: var(--purple); }
+  .ab-dot-verdict { background: var(--brand); }
+  .ab-card-title { font-size: 13px; font-weight: 600; color: var(--text); }
+  .ab-card-sub { font-size: 11px; color: var(--text-3); margin-top: 1px; }
+  .ab-stats { padding: 14px 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .ab-stat-label { font-size: 11px; color: var(--text-3); font-weight: 500; margin-bottom: 3px; text-transform: uppercase; letter-spacing: .04em; }
+  .ab-stat-val { font-size: 20px; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
+  .ab-stat-sub { font-size: 11px; color: var(--text-4); margin-top: 2px; }
+  .verdict-banner { padding: 16px 18px; display: flex; align-items: center; gap: 12px; }
+  .verdict-icon { font-size: 28px; }
+  .verdict-text { font-size: 14px; font-weight: 600; color: var(--text); }
+  .verdict-sub { font-size: 12px; color: var(--text-3); margin-top: 3px; }
+  .delta-row { padding: 0 18px 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .delta-item { background: var(--bg); border-radius: var(--radius-sm); padding: 10px 12px; border: 1px solid var(--border-light); }
+  .delta-label { font-size: 11px; color: var(--text-3); margin-bottom: 3px; }
+  .delta-val { font-size: 16px; font-weight: 700; }
+
+  /* CHARTS ROW */
+  .chart-row { display: grid; grid-template-columns: 1fr 340px; gap: 14px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm); }
+  .card-header { padding: 16px 20px 0; display: flex; align-items: center; justify-content: space-between; }
+  .card-title { font-size: 14px; font-weight: 600; color: var(--text); }
+  .card-subtitle { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+  .card-body { padding: 16px 20px 20px; }
+  .chart-wrap { padding: 12px 20px 20px; position: relative; height: 220px; }
+
+  /* CHART TABS */
+  .chart-tabs { display: flex; gap: 6px; }
+  .chart-tab { font-size: 11px; font-weight: 500; padding: 4px 10px; border-radius: 99px; border: 1px solid var(--border); background: none; cursor: pointer; color: var(--text-3); transition: all .15s; }
+  .chart-tab.active { background: var(--brand); color: #fff; border-color: var(--brand); }
+
+  /* SECTOR BARS */
+  .sector-list { padding: 12px 20px 20px; display: flex; flex-direction: column; gap: 10px; }
+  .sector-row { display: flex; flex-direction: column; gap: 4px; }
+  .sector-meta { display: flex; justify-content: space-between; align-items: center; }
+  .sector-name { font-size: 12px; font-weight: 500; color: var(--text-2); }
+  .sector-score { font-size: 12px; font-weight: 600; }
+  .sector-bar-bg { height: 4px; background: var(--border-light); border-radius: 99px; overflow: hidden; }
+  .sector-bar-fill { height: 4px; border-radius: 99px; transition: width .6s ease; }
+  .rank-badge { font-size: 10px; background: var(--brand-light); color: var(--brand); padding: 1px 6px; border-radius: 99px; font-weight: 600; }
+
+  /* POSITIONS TABS */
+  .tab-bar { display: flex; gap: 2px; padding: 12px 16px 0; border-bottom: 1px solid var(--border-light); }
+  .tab-btn { font-size: 13px; font-weight: 500; padding: 8px 14px; border: none; background: none; cursor: pointer; color: var(--text-3); border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all .15s; border-radius: 6px 6px 0 0; }
+  .tab-btn.active { color: var(--brand); border-bottom-color: var(--brand); }
+  .tab-btn:hover:not(.active) { color: var(--text-2); background: var(--bg); }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+
+  /* BOTTOM GRID */
+  .bottom-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .full-row { margin-bottom: 0; }
+
+  /* TABLE */
+  table { width: 100%; border-collapse: collapse; }
+  th { font-size: 11px; color: var(--text-3); font-weight: 500; text-align: left; padding: 0 12px 10px; text-transform: uppercase; letter-spacing: .04em; border-bottom: 1px solid var(--border); }
+  td { padding: 12px; font-size: 13px; color: var(--text-2); border-bottom: 1px solid var(--border-light); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg); }
+  .ticker-cell { font-weight: 600; color: var(--text); font-size: 14px; }
+  .sector-small { font-size: 11px; color: var(--text-4); margin-top: 1px; }
+
+  /* BADGES */
+  .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 600; }
+  .b-long    { background: var(--green-light);   color: var(--green); }
+  .b-short   { background: var(--red-light);     color: var(--red); }
+  .b-high    { background: var(--brand-light);   color: var(--brand); }
+  .b-med     { background: var(--amber-light);   color: var(--amber); }
+  .b-low     { background: var(--border-light);  color: var(--text-3); }
+  .b-open    { background: var(--blue-light);    color: var(--blue); }
+  .b-acct-a  { background: #F3F4F6;              color: #6B7280; }
+  .b-acct-b  { background: var(--purple-light);  color: var(--purple); }
+
+  /* ACTIVITY FEED */
+  .feed { display: flex; flex-direction: column; }
+  .feed-item { display: flex; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--border-light); }
+  .feed-item:last-child { border-bottom: none; }
+  .feed-dot { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .fd-open   { background: var(--green-light); }
+  .fd-closed { background: var(--blue-light); }
+  .fd-reject { background: var(--border-light); }
+  .feed-icon { width: 14px; height: 14px; }
+  .feed-content { flex: 1; min-width: 0; }
+  .feed-title { font-size: 13px; font-weight: 600; color: var(--text); }
+  .feed-desc { font-size: 12px; color: var(--text-3); margin-top: 3px; line-height: 1.5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .feed-time { font-size: 11px; color: var(--text-4); margin-top: 4px; display: flex; align-items: center; gap: 6px; }
+
+  /* RISK PANEL */
+  .risk-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; padding: 16px 20px 20px; }
+  .risk-item { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; }
+  .risk-item-title { font-size: 12px; font-weight: 600; color: var(--text-3); margin-bottom: 10px; text-transform: uppercase; letter-spacing: .04em; }
+  .risk-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .risk-label { font-size: 11px; color: var(--text-3); }
+  .risk-val { font-size: 13px; font-weight: 600; color: var(--text); }
+  .risk-limit { font-size: 11px; color: var(--text-4); margin-top: 2px; }
+  .prog-wrap { height: 5px; background: var(--border); border-radius: 99px; margin: 4px 0; overflow: hidden; }
+  .prog-fill { height: 5px; border-radius: 99px; transition: width .8s cubic-bezier(.4,0,.2,1); }
+  .prog-ok    { background: var(--brand); }
+  .prog-warn  { background: var(--amber); }
+  .prog-danger{ background: var(--red); }
+
+  /* SECTOR EXPOSURE TAGS */
+  .sector-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .sector-tag { font-size: 10px; padding: 2px 7px; border-radius: 99px; background: var(--brand-light); color: var(--brand); font-weight: 500; }
+
+  /* EMPTY STATE */
+  .empty { text-align: center; padding: 48px 24px; color: var(--text-3); }
+  .empty-icon { font-size: 32px; margin-bottom: 10px; opacity: .4; }
+  .empty-text { font-size: 14px; }
+
+  /* FOOTER */
+  footer { border-top: 1px solid var(--border); padding: 20px 28px; display: flex; justify-content: space-between; align-items: center; background: var(--surface); margin-top: 40px; }
+  .footer-left { font-size: 12px; color: var(--text-4); }
+  .footer-right { font-size: 12px; color: var(--text-4); }
+
+  /* LOADING */
+  .loading { display: flex; align-items: center; justify-content: center; padding: 40px; color: var(--text-3); gap: 10px; }
+  .spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--brand); border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* THESIS MODAL */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 200; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border-radius: var(--radius-lg); width: 580px; max-width: 95vw; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.15); }
+  .modal-header { padding: 20px 24px 0; display: flex; justify-content: space-between; align-items: flex-start; }
+  .modal-title { font-size: 18px; font-weight: 700; color: var(--text); }
+  .modal-close { background: none; border: none; cursor: pointer; color: var(--text-3); padding: 4px; border-radius: 6px; font-size: 18px; line-height: 1; }
+  .modal-close:hover { background: var(--bg); }
+  .modal-body { padding: 16px 24px 24px; }
+  .modal-section { margin-bottom: 16px; }
+  .modal-section-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); margin-bottom: 6px; }
+  .modal-section-body { font-size: 13px; color: var(--text-2); line-height: 1.6; background: var(--bg); border-radius: var(--radius-sm); padding: 10px 14px; border-left: 3px solid var(--brand); }
+  .modal-section-body.exit { border-left-color: var(--red); }
+  .modal-section-body.catalyst { border-left-color: var(--green); }
+
+  /* FLOATING P&L */
+  .pnl-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .pnl-total { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+  .pnl-sub { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+  .pnl-refresh-btn { display: flex; align-items: center; gap: 7px; background: var(--brand); color: #fff; border: none; border-radius: var(--radius-sm); padding: 8px 16px; font-size: 13px; font-weight: 500; cursor: pointer; transition: opacity .15s; }
+  .pnl-refresh-btn:hover { opacity: .85; }
+  .pnl-refresh-btn:disabled { opacity: .5; cursor: not-allowed; }
+  .pnl-refresh-btn svg { width: 14px; height: 14px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .pnl-refresh-btn.spinning svg { animation: spin .7s linear infinite; }
+  .pnl-fetched { font-size: 11px; color: var(--text-4); margin-top: 4px; }
+  .pnl-bar-wrap { width: 70px; height: 5px; background: var(--border); border-radius: 99px; overflow: hidden; display: inline-block; vertical-align: middle; margin-right: 5px; }
+  .pnl-bar-fill { height: 5px; border-radius: 99px; }
+  .stop-close { color: var(--red); font-weight: 600; }
+  .stop-ok    { color: var(--text-3); }
+  .na-cell    { color: var(--text-4); font-size: 12px; }
+
+  @media (max-width: 900px) {
+    .metrics-grid { grid-template-columns: repeat(2,1fr); }
+    .ab-grid { grid-template-columns: 1fr; }
+    .chart-row { grid-template-columns: 1fr; }
+    .bottom-grid { grid-template-columns: 1fr; }
+    .risk-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-left">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+    </div>
+    <div>
+      <div class="logo-text">Plotus</div>
+      <div class="logo-sub">AI Trading System</div>
+    </div>
+  </div>
+  <div class="nav-right">
+    <div class="badge-paper">Paper Trading</div>
+    <div class="badge-live"><div class="pulse"></div> Live</div>
+    <div class="last-run" id="lastRun">Refreshing…</div>
+  </div>
+</nav>
+
+<!-- THESIS MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modalTitle"></div>
+        <div style="display:flex;gap:8px;margin-top:8px" id="modalBadges"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- OVERVIEW METRICS -->
+  <div class="section-title">Overview — Combined</div>
+  <div class="metrics-grid" id="metricsGrid">
+    <div class="loading"><div class="spinner"></div> Loading…</div>
+  </div>
+
+  <!-- FLOATING P&L -->
+  <div class="section-title">Floating P&L — Open Positions (Live from IBKR)</div>
+  <div class="card full-row" style="padding: 20px 20px 4px">
+    <div class="pnl-header">
+      <div>
+        <div id="pnlTotal" style="color:var(--text-3);font-size:14px">Click refresh to fetch live prices from IBKR</div>
+        <div class="pnl-fetched" id="pnlFetched"></div>
+      </div>
+      <button class="pnl-refresh-btn" id="pnlBtn" onclick="fetchPnl()">
+        <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        Refresh P&L
+      </button>
+    </div>
+    <div id="pnlTable"><div class="empty" style="padding:24px"><div class="empty-text">Press refresh to load live prices from IBKR.<br><span style="font-size:12px;color:var(--text-4)">Note: Account A market data may be limited — see IBKR subscription settings.</span></div></div></div>
+  </div>
+
+  <!-- A/B EXPERIMENT -->
+  <div class="section-title">A/B Experiment — Learning vs Baseline</div>
+  <div class="ab-grid" id="abGrid">
+    <div class="loading"><div class="spinner"></div></div>
+  </div>
+
+  <!-- PERFORMANCE + SECTORS -->
+  <div class="section-title">Performance & Market Context</div>
+  <div class="chart-row">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Cumulative P&L</div>
+          <div class="card-subtitle">Closed positions only</div>
+        </div>
+        <div class="chart-tabs">
+          <button class="chart-tab active" onclick="switchPerfTab('combined',this)">Combined</button>
+          <button class="chart-tab" onclick="switchPerfTab('account_a',this)">Acct A</button>
+          <button class="chart-tab" onclick="switchPerfTab('account_b',this)">Acct B</button>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="perfChart"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Sector rankings</div>
+        <div class="card-subtitle">Daily momentum score</div>
+      </div>
+      <div class="sector-list" id="sectorList">
+        <div class="loading"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPEN POSITIONS -->
+  <div class="section-title">Open Positions</div>
+  <div class="card full-row">
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('open','all',this)">All</button>
+      <button class="tab-btn" onclick="switchTab('open','a',this)">⚪ Account A — Baseline</button>
+      <button class="tab-btn" onclick="switchTab('open','b',this)">🟣 Account B — Learning</button>
+    </div>
+    <div id="openPositions" style="padding:4px 0">
+      <div class="loading"><div class="spinner"></div> Loading…</div>
+    </div>
+  </div>
+
+  <!-- CLOSED TRADES + ACTIVITY -->
+  <div class="section-title">Trade History & Activity</div>
+  <div class="bottom-grid">
+    <div class="card">
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('closed','all',this)">All Closed</button>
+        <button class="tab-btn" onclick="switchTab('closed','a',this)">Acct A</button>
+        <button class="tab-btn" onclick="switchTab('closed','b',this)">Acct B</button>
+      </div>
+      <div id="closedPositions" style="overflow-x:auto">
+        <div class="loading"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Activity feed</div>
+      </div>
+      <div class="feed" id="activityFeed">
+        <div class="loading"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RISK -->
+  <div class="section-title">Risk Exposure</div>
+  <div class="card full-row">
+    <div class="card-header">
+      <div class="card-title">Risk Manager — live limits</div>
+      <div class="card-subtitle">All rules enforced before every trade</div>
+    </div>
+    <div class="risk-grid" id="riskPanel">
+      <div class="loading"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <div class="footer-left">Plotus AI Trading System — Paper trading phase. Not financial advice.</div>
+  <div class="footer-right" id="footerTime"></div>
+</footer>
+
+<script>
+const API = '';
+let perfChart   = null;
+let perfData    = {};
+let openData    = [];
+let closedData  = [];
+let activeOpenTab   = 'all';
+let activeClosedTab = 'all';
+
+// ── Helpers ──────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const fmt    = (n, dec=2) => n == null ? '—' : Number(n).toFixed(dec);
+const fmtUSD = n => n == null ? '—' : (n >= 0 ? '+' : '-') + '$' + Math.abs(n).toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0});
+const fmtPct = n => n == null ? '—' : (n >= 0 ? '+' : '') + fmt(n) + '%';
+const fmtDate= s => s ? new Date(s).toLocaleDateString('en-SG', {day:'2-digit',month:'short',year:'numeric'}) : '—';
+const clamp  = (n, lo, hi) => Math.min(Math.max(n, lo), hi);
+
+function badge(text, cls){ return `<span class="badge ${cls}">${text}</span>`; }
+function dirBadge(d){ return badge(d, d==='LONG'?'b-long':'b-short'); }
+function convBadge(c){ return badge(c, c==='HIGH'?'b-high':c==='MEDIUM'?'b-med':'b-low'); }
+function acctBadge(a){ return a==='A' ? badge('A — Baseline','b-acct-a') : badge('B — Learning','b-acct-b'); }
+
+// ── Fetch all data ────────────────────────────────────────────────────────
+async function fetchAll(){
+  try {
+    const [metrics, open, closed, sectors, activity, risk, perf, ab] = await Promise.all([
+      fetch(`${API}/api/metrics`).then(r=>r.json()),
+      fetch(`${API}/api/positions/open`).then(r=>r.json()),
+      fetch(`${API}/api/positions/closed`).then(r=>r.json()),
+      fetch(`${API}/api/sectors`).then(r=>r.json()),
+      fetch(`${API}/api/activity`).then(r=>r.json()),
+      fetch(`${API}/api/risk`).then(r=>r.json()),
+      fetch(`${API}/api/performance`).then(r=>r.json()),
+      fetch(`${API}/api/ab`).then(r=>r.json()),
+    ]);
+
+    openData   = open;
+    closedData = closed;
+    perfData   = perf;
+
+    renderMetrics(metrics);
+    renderAB(ab);
+    renderPerfChart(perf.combined || []);
+    renderSectors(sectors);
+    renderOpenPositions(open, activeOpenTab);
+    renderClosedPositions(closed, activeClosedTab);
+    renderActivity(activity);
+    renderRisk(risk);
+
+    const now = new Date();
+    $('lastRun').textContent = 'Updated ' + now.toLocaleTimeString('en-SG', {hour:'2-digit',minute:'2-digit'});
+    $('footerTime').textContent = 'Last refreshed: ' + now.toLocaleString('en-SG');
+  } catch(e) {
+    console.error(e);
+    $('lastRun').textContent = 'Connection error';
+  }
+}
+
+// ── Metrics ───────────────────────────────────────────────────────────────
+function renderMetrics(m){
+  const pnlPos = m.total_pnl_pct >= 0;
+  const wrPass = m.win_rate >= m.targets.win_rate;
+  const wlPass = m.win_loss_ratio >= m.targets.win_loss_ratio;
+  const ddPass = m.max_drawdown <= m.targets.max_drawdown;
+
+  $('metricsGrid').innerHTML = `
+    <div class="metric-card">
+      <div class="metric-label">Total Paper P&L</div>
+      <div class="metric-value ${pnlPos?'val-pos':'val-neg'}">${fmtPct(m.total_pnl_pct)}</div>
+      <div class="metric-sub">${fmtUSD(m.total_pnl_usd)} across both accounts</div>
+      <div class="metric-target target-neutral">${m.total_trades} total trades</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Win Rate</div>
+      <div class="metric-value">${fmt(m.win_rate,1)}%</div>
+      <div class="metric-sub">${m.closed_positions} closed · ${m.open_positions} open</div>
+      <div class="metric-target ${wrPass?'target-pass':'target-fail'}">${wrPass?'✓':'✗'} Target ≥ ${m.targets.win_rate}%</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Avg Win / Avg Loss</div>
+      <div class="metric-value">${fmt(m.win_loss_ratio,2)}x</div>
+      <div class="metric-sub">Risk/reward ratio</div>
+      <div class="metric-target ${wlPass?'target-pass':'target-fail'}">${wlPass?'✓':'✗'} Target ≥ ${m.targets.win_loss_ratio}x</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Deployed Capital</div>
+      <div class="metric-value">${fmt(m.open_exposure_pct,1)}%</div>
+      <div class="metric-sub">Max drawdown: ${fmt(m.max_drawdown,1)}%</div>
+      <div class="metric-target ${ddPass?'target-pass':'target-fail'}">${ddPass?'✓':'✗'} DD limit ${m.targets.max_drawdown}%</div>
+    </div>`;
+}
+
+// ── A/B Panel ─────────────────────────────────────────────────────────────
+function renderAB(ab){
+  const a = ab.account_a, b = ab.account_b;
+  const verdictMap = {
+    LEARNING_BETTER: { icon:'🟣', text:'Learning is winning', color:'var(--purple)' },
+    BASELINE_BETTER: { icon:'⚪', text:'Baseline is winning', color:'var(--text-3)' },
+    INCONCLUSIVE:    { icon:'⚖️', text:'Too close to call',   color:'var(--amber)' },
+    NO_DATA:         { icon:'📊', text:'Awaiting data',       color:'var(--text-3)' },
+  };
+  const v = verdictMap[ab.verdict] || verdictMap.NO_DATA;
+  const deltaWrColor = ab.delta_win_rate > 0 ? 'var(--purple)' : ab.delta_win_rate < 0 ? 'var(--green)' : 'var(--text-3)';
+  const deltaPnlColor = ab.delta_avg_pnl > 0 ? 'var(--purple)' : ab.delta_avg_pnl < 0 ? 'var(--green)' : 'var(--text-3)';
+  const noData = !ab.data_sufficient;
+
+  $('abGrid').innerHTML = `
+    <!-- Account A -->
+    <div class="ab-card">
+      <div class="ab-card-header">
+        <div class="ab-dot ab-dot-a"></div>
+        <div>
+          <div class="ab-card-title">Account A — Baseline</div>
+          <div class="ab-card-sub">No learning · Control group</div>
+        </div>
+      </div>
+      <div class="ab-stats">
+        <div>
+          <div class="ab-stat-label">Win Rate</div>
+          <div class="ab-stat-val">${a.trades ? fmt(a.win_rate,1)+'%' : '—'}</div>
+          <div class="ab-stat-sub">${a.trades} closed</div>
+        </div>
+        <div>
+          <div class="ab-stat-label">Avg P&L</div>
+          <div class="ab-stat-val ${a.avg_pnl>=0?'val-pos':'val-neg'}">${a.trades ? fmtPct(a.avg_pnl) : '—'}</div>
+          <div class="ab-stat-sub">${fmtUSD(a.total_pnl)}</div>
+        </div>
+        <div>
+          <div class="ab-stat-label">Open</div>
+          <div class="ab-stat-val">${a.open}</div>
+          <div class="ab-stat-sub">positions</div>
+        </div>
+        <div>
+          <div class="ab-stat-label">Total P&L</div>
+          <div class="ab-stat-val ${a.total_pnl>=0?'val-pos':'val-neg'}">${fmtUSD(a.total_pnl)}</div>
+          <div class="ab-stat-sub">paper</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Account B -->
+    <div class="ab-card">
+      <div class="ab-card-header">
+        <div class="ab-dot ab-dot-b"></div>
+        <div>
+          <div class="ab-card-title">Account B — Learning</div>
+          <div class="ab-card-sub">Self-improving · Historical insights ON</div>
+        </div>
+      </div>
+      <div class="ab-stats">
+        <div>
+          <div class="ab-stat-label">Win Rate</div>
+          <div class="ab-stat-val">${b.trades ? fmt(b.win_rate,1)+'%' : '—'}</div>
+          <div class="ab-stat-sub">${b.trades} closed</div>
+        </div>
+        <div>
+          <div class="ab-stat-label">Avg P&L</div>
+          <div class="ab-stat-val ${b.avg_pnl>=0?'val-pos':'val-neg'}">${b.trades ? fmtPct(b.avg_pnl) : '—'}</div>
+          <div class="ab-stat-sub">${fmtUSD(b.total_pnl)}</div>
+        </div>
+        <div>
+          <div class="ab-stat-label">Open</div>
+          <div class="ab-stat-val">${b.open}</div>
+          <div class="ab-stat-sub">positions</div>
+        </div>
+        <div>
+          <div class="ab-stat-label">Total P&L</div>
+          <div class="ab-stat-val ${b.total_pnl>=0?'val-pos':'val-neg'}">${fmtUSD(b.total_pnl)}</div>
+          <div class="ab-stat-sub">paper</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Verdict -->
+    <div class="ab-card">
+      <div class="ab-card-header">
+        <div class="ab-dot ab-dot-verdict"></div>
+        <div>
+          <div class="ab-card-title">Experiment Verdict</div>
+          <div class="ab-card-sub">Requires ≥5 closed trades per account</div>
+        </div>
+      </div>
+      <div class="verdict-banner">
+        <div class="verdict-icon">${v.icon}</div>
+        <div>
+          <div class="verdict-text" style="color:${v.color}">${v.text}</div>
+          <div class="verdict-sub">${noData ? 'Need more closed trades to draw conclusions' : 'Based on closed trade performance'}</div>
+        </div>
+      </div>
+      <div class="delta-row">
+        <div class="delta-item">
+          <div class="delta-label">Win rate delta (B vs A)</div>
+          <div class="delta-val" style="color:${deltaWrColor}">${ab.delta_win_rate != null ? (ab.delta_win_rate>=0?'+':'')+fmt(ab.delta_win_rate,1)+'pp' : '—'}</div>
+        </div>
+        <div class="delta-item">
+          <div class="delta-label">Avg P&L delta (B vs A)</div>
+          <div class="delta-val" style="color:${deltaPnlColor}">${ab.delta_avg_pnl != null ? fmtPct(ab.delta_avg_pnl) : '—'}</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ── Performance chart ─────────────────────────────────────────────────────
+function renderPerfChart(data){
+  const ctx = document.getElementById('perfChart');
+  if(perfChart) perfChart.destroy();
+  if(!data.length){
+    ctx.parentElement.innerHTML = '<div class="empty"><div class="empty-icon">📈</div><div class="empty-text">No closed trades yet.<br>Chart appears after first exit.</div></div>';
+    return;
+  }
+  const labels = data.map(d => fmtDate(d.date));
+  const values = data.map(d => d.cumulative_pct);
+  const isPos  = values[values.length-1] >= 0;
+  perfChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        borderColor: isPos ? '#16A34A' : '#DC2626',
+        borderWidth: 2.5,
+        pointRadius: data.length > 15 ? 0 : 4,
+        pointBackgroundColor: isPos ? '#16A34A' : '#DC2626',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        fill: true,
+        backgroundColor: isPos ? 'rgba(22,163,74,.08)' : 'rgba(220,38,38,.08)',
+        tension: 0.4,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: {
+        callbacks: { label: ctx => ' ' + fmtPct(ctx.raw) }
+      }},
+      scales: {
+        x: { grid: { display: false }, ticks: { font:{size:11}, color:'#9CA3AF', maxRotation:0, maxTicksLimit:8 }},
+        y: { grid: { color:'#F3F4F6' }, ticks: { font:{size:11}, color:'#9CA3AF', callback: v => fmtPct(v) }}
+      }
+    }
+  });
+}
+
+function switchPerfTab(key, el){
+  document.querySelectorAll('.chart-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderPerfChart((perfData[key]) || []);
+}
+
+// ── Sectors ───────────────────────────────────────────────────────────────
+function renderSectors(data){
+  const sectors = data.sectors || [];
+  if(!sectors.length){ $('sectorList').innerHTML = '<div class="empty"><div class="empty-text">No sector data yet.</div></div>'; return; }
+  const maxAbs = Math.max(...sectors.map(s => Math.abs(s.composite_score)));
+  $('sectorList').innerHTML = sectors.slice(0,8).map((s,i) => {
+    const pct      = maxAbs > 0 ? Math.abs(s.composite_score) / maxAbs * 100 : 0;
+    const isTop    = i < 3;
+    const color    = s.composite_score > 0 ? '#16A34A' : '#DC2626';
+    const barColor = isTop ? '#16A34A' : s.composite_score < 0 ? '#DC2626' : '#6B7280';
+    return `<div class="sector-row">
+      <div class="sector-meta">
+        <div style="display:flex;align-items:center;gap:6px">
+          ${isTop ? `<span class="rank-badge">#${i+1}</span>` : `<span style="font-size:11px;color:var(--text-4);width:20px;text-align:right">#${i+1}</span>`}
+          <span class="sector-name">${s.ticker} <span style="color:var(--text-4);font-weight:400">${s.name}</span></span>
+        </div>
+        <span class="sector-score" style="color:${color}">${fmtPct(s.composite_score)}</span>
+      </div>
+      <div class="sector-bar-bg">
+        <div class="sector-bar-fill" style="width:${pct}%;background:${barColor}"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Tab switching ─────────────────────────────────────────────────────────
+function switchTab(type, filter, el){
+  const bar = el.closest('.tab-bar');
+  bar.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  if(type === 'open'){
+    activeOpenTab = filter;
+    renderOpenPositions(openData, filter);
+  } else {
+    activeClosedTab = filter;
+    renderClosedPositions(closedData, filter);
+  }
+}
+
+function filterByAccount(data, filter){
+  if(filter === 'all') return data;
+  return data.filter(p => p.account === filter.toUpperCase());
+}
+
+// ── Open positions ─────────────────────────────────────────────────────────
+function renderOpenPositions(data, filter='all'){
+  const rows = filterByAccount(data, filter);
+  if(!rows.length){
+    $('openPositions').innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No open positions in this account.</div></div>';
+    return;
+  }
+  $('openPositions').innerHTML = `
+    <div style="overflow-x:auto">
+    <table>
+      <thead><tr>
+        <th>Ticker</th><th>Acct</th><th>Direction</th><th>Conviction</th>
+        <th>Entry</th><th>Price</th><th>Size</th><th>Stop</th><th>Deadline</th><th>Thesis</th>
+      </tr></thead>
+      <tbody>${rows.map(p => {
+        const daysLeft = p.deadline_date ? Math.ceil((new Date(p.deadline_date) - new Date()) / 86400000) : null;
+        const dlColor  = daysLeft != null && daysLeft < 7 ? 'color:var(--red)' : '';
+        return `<tr>
+          <td><div class="ticker-cell">${p.ticker}</div><div class="sector-small">${p.sector||''}</div></td>
+          <td>${acctBadge(p.account)}</td>
+          <td>${dirBadge(p.direction)}</td>
+          <td>${convBadge(p.conviction)}</td>
+          <td>${fmtDate(p.entry_date)}</td>
+          <td>$${fmt(p.entry_price,2)}</td>
+          <td>${fmt(p.position_size_pct,1)}%<br><span style="font-size:11px;color:var(--text-4)">$${Math.round(p.entry_size_usd||0).toLocaleString()}</span></td>
+          <td>${p.calculated_stop ? '$'+fmt(p.calculated_stop,2) : '<span style="color:var(--text-4)">—</span>'}</td>
+          <td><span style="${dlColor}">${fmtDate(p.deadline_date)}</span>${daysLeft!=null?`<br><span style="font-size:11px;color:var(--text-4)">${daysLeft}d left</span>`:''}</td>
+          <td><button onclick='showThesis(${JSON.stringify(p).replace(/'/g,"&#39;")})' style="background:var(--brand-light);color:var(--brand);border:none;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:500;cursor:pointer">View →</button></td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div>`;
+}
+
+// ── Closed positions ───────────────────────────────────────────────────────
+function renderClosedPositions(data, filter='all'){
+  const rows = filterByAccount(data, filter);
+  if(!rows.length){
+    $('closedPositions').innerHTML = '<div class="empty"><div class="empty-text">No closed trades yet.</div></div>';
+    return;
+  }
+  $('closedPositions').innerHTML = `
+    <table>
+      <thead><tr><th>Ticker</th><th>Acct</th><th>Dir</th><th>Entry</th><th>Exit</th><th>P&L</th><th>Reason</th></tr></thead>
+      <tbody>${rows.slice(0,15).map(p => {
+        const pos = p.pnl_pct >= 0;
+        return `<tr>
+          <td><div class="ticker-cell">${p.ticker}</div><div class="sector-small">${p.sector||''}</div></td>
+          <td>${acctBadge(p.account)}</td>
+          <td>${dirBadge(p.direction)}</td>
+          <td>${fmtDate(p.entry_date)}</td>
+          <td>${fmtDate(p.exit_date)}</td>
+          <td class="${pos?'val-pos':'val-neg'}" style="font-weight:600">${fmtPct(p.pnl_pct)}<br><span style="font-size:11px;font-weight:400">${fmtUSD(p.pnl_usd)}</span></td>
+          <td style="font-size:12px;color:var(--text-3);max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.exit_reason||'—'}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+}
+
+// ── Activity feed ──────────────────────────────────────────────────────────
+function renderActivity(data){
+  if(!data.length){
+    $('activityFeed').innerHTML = '<div class="empty"><div class="empty-text">No activity yet.</div></div>';
+    return;
+  }
+  const icons = {
+    opened:   {cls:'fd-open',   svg:'<path d="M7 17L17 7M17 7H7M17 7v10" stroke="#16A34A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'},
+    closed:   {cls:'fd-closed', svg:'<path d="M5 13l4 4L19 7" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'},
+    rejected: {cls:'fd-reject', svg:'<path d="M6 18L18 6M6 6l12 12" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'},
+  };
+  $('activityFeed').innerHTML = data.slice(0,12).map(e => {
+    const ic  = icons[e.type] || icons.rejected;
+    const acctLabel = e.account === 'A' ? '<span style="color:#9CA3AF;font-size:10px">A</span>' : '<span style="color:#7C3AED;font-size:10px">B</span>';
+    let title = '', sub = '';
+    if(e.type === 'opened'){
+      const pos = true;
+      title = `${e.ticker} ${e.direction} opened`;
+      sub   = (e.detail||'').substring(0,100);
+    } else if(e.type === 'closed'){
+      const pos = e.pnl_pct >= 0;
+      title = `${e.ticker} closed <span style="color:${pos?'var(--green)':'var(--red)'};font-weight:600">${fmtPct(e.pnl_pct)}</span>`;
+      sub   = (e.detail||'').substring(0,100);
+    } else {
+      title = `${e.ticker} rejected by risk manager`;
+      sub   = (e.detail||'').substring(0,100);
+    }
+    return `<div class="feed-item">
+      <div class="feed-dot ${ic.cls}">
+        <svg class="feed-icon" viewBox="0 0 24 24" fill="none">${ic.svg}</svg>
+      </div>
+      <div class="feed-content">
+        <div class="feed-title">${title}</div>
+        <div class="feed-desc">${sub}</div>
+        <div class="feed-time">${fmtDate(e.date)} ${acctLabel}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Risk panel ────────────────────────────────────────────────────────────
+function renderRisk(r){
+  const lim = r.limits;
+
+  function riskCard(data, title){
+    const pctPos    = clamp(data.open_count / lim.max_positions * 100, 0, 100);
+    const pctLargest= clamp(data.largest_position / lim.max_position * 100, 0, 100);
+    const pctDelta  = clamp(data.net_delta / lim.max_delta * 100, 0, 100);
+    const barCls = pct => pct < 60 ? 'prog-ok' : pct < 85 ? 'prog-warn' : 'prog-danger';
+    const sectorTags = Object.entries(data.sector_exposure||{})
+      .map(([k,v]) => `<span class="sector-tag">${k} ${v}%</span>`).join('');
+    return `<div class="risk-item">
+      <div class="risk-item-title">${title}</div>
+      <div class="risk-row"><span class="risk-label">Open positions</span><span class="risk-val">${data.open_count} / ${lim.max_positions}</span></div>
+      <div class="prog-wrap"><div class="prog-fill ${barCls(pctPos)}" style="width:${pctPos}%"></div></div>
+      <div class="risk-row"><span class="risk-label">Largest position</span><span class="risk-val">${fmt(data.largest_position,1)}% <span style="color:var(--text-4);font-size:11px">/ ${lim.max_position}%</span></span></div>
+      <div class="prog-wrap"><div class="prog-fill ${barCls(pctLargest)}" style="width:${pctLargest}%"></div></div>
+      <div class="risk-row"><span class="risk-label">Net delta</span><span class="risk-val">${fmt(data.net_delta,1)}% <span style="color:var(--text-4);font-size:11px">/ ${lim.max_delta}%</span></span></div>
+      <div class="prog-wrap"><div class="prog-fill ${barCls(pctDelta)}" style="width:${pctDelta}%"></div></div>
+      <div class="risk-label" style="margin-top:8px">Sector exposure</div>
+      <div class="sector-tags">${sectorTags || '<span style="color:var(--text-4);font-size:11px">None</span>'}</div>
+    </div>`;
+  }
+
+  $('riskPanel').innerHTML =
+    riskCard(r.combined,  'Combined') +
+    riskCard(r.account_a, '⚪ Account A — Baseline') +
+    riskCard(r.account_b, '🟣 Account B — Learning');
+}
+
+// ── Thesis modal ──────────────────────────────────────────────────────────
+function showThesis(p){
+  $('modalTitle').textContent = `${p.ticker} — Trade Thesis`;
+  $('modalBadges').innerHTML  = dirBadge(p.direction) + ' ' + convBadge(p.conviction) + ' ' + acctBadge(p.account) + ' ' + badge(p.sector||'', 'b-open');
+  $('modalBody').innerHTML = `
+    <div class="modal-section">
+      <div class="modal-section-title">Core Thesis</div>
+      <div class="modal-section-body">${p.core_thesis||'—'}</div>
+    </div>
+    <div class="modal-section">
+      <div class="modal-section-title">Catalyst</div>
+      <div class="modal-section-body catalyst">${p.catalyst||'—'}</div>
+    </div>
+    <div class="modal-section">
+      <div class="modal-section-title">Exit if (Invalidation)</div>
+      <div class="modal-section-body exit">${p.invalidation_conditions||'—'}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px">
+      <div style="background:var(--bg);border-radius:6px;padding:12px;border:1px solid var(--border-light)">
+        <div style="font-size:11px;color:var(--text-3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em">Entry Date</div>
+        <div style="font-size:14px;font-weight:600">${fmtDate(p.entry_date)}</div>
+      </div>
+      <div style="background:var(--bg);border-radius:6px;padding:12px;border:1px solid var(--border-light)">
+        <div style="font-size:11px;color:var(--text-3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em">Hard Deadline</div>
+        <div style="font-size:14px;font-weight:600">${fmtDate(p.deadline_date)}</div>
+      </div>
+      <div style="background:var(--bg);border-radius:6px;padding:12px;border:1px solid var(--border-light)">
+        <div style="font-size:11px;color:var(--text-3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em">Entry Price</div>
+        <div style="font-size:14px;font-weight:600">$${fmt(p.entry_price,2)}</div>
+      </div>
+      <div style="background:var(--bg);border-radius:6px;padding:12px;border:1px solid var(--border-light)">
+        <div style="font-size:11px;color:var(--text-3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em">Stop Price</div>
+        <div style="font-size:14px;font-weight:600">${p.calculated_stop ? '$'+fmt(p.calculated_stop,2) : '—'}</div>
+      </div>
+      <div style="background:var(--bg);border-radius:6px;padding:12px;border:1px solid var(--border-light)">
+        <div style="font-size:11px;color:var(--text-3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em">Position Size</div>
+        <div style="font-size:14px;font-weight:600">${fmt(p.position_size_pct,1)}% · $${Math.round(p.entry_size_usd||0).toLocaleString()}</div>
+      </div>
+      <div style="background:var(--bg);border-radius:6px;padding:12px;border:1px solid var(--border-light)">
+        <div style="font-size:11px;color:var(--text-3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em">Learning Mode</div>
+        <div style="font-size:14px;font-weight:600">${p.learning_mode === 'with_learning' ? '🟣 Self-improving' : '⚪ Baseline'}</div>
+      </div>
+    </div>`;
+  $('modalOverlay').classList.add('open');
+}
+
+function closeModal(e){
+  if(!e || e.target === $('modalOverlay')) $('modalOverlay').classList.remove('open');
+}
+document.addEventListener('keydown', e => { if(e.key==='Escape') closeModal(); });
+
+// ── Floating P&L ─────────────────────────────────────────────────────────
+async function fetchPnl(){
+  const btn = $('pnlBtn');
+  btn.disabled = true;
+  btn.classList.add('spinning');
+  $('pnlTotal').innerHTML = '<span style="color:var(--text-3)">Fetching live prices from IBKR… (~30s)</span>';
+  $('pnlTable').innerHTML = '<div class="loading"><div class="spinner"></div> Connecting to IBKR gateways…</div>';
+
+  try {
+    const data = await fetch(`${API}/api/pnl`).then(r => r.json());
+    renderPnl(data);
+  } catch(e) {
+    $('pnlTotal').innerHTML = '<span style="color:var(--red)">Error fetching P&L</span>';
+    $('pnlTable').innerHTML = '<div class="empty"><div class="empty-text">Could not reach backend. Is the server running?</div></div>';
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove('spinning');
+  }
+}
+
+function renderPnl(data){
+  const pos   = data.positions || [];
+  const total = data.total_pnl_usd;
+  const totPct= data.total_pnl_pct;
+  const priced= data.priced_count;
+  const total_= data.total_count;
+  const fetched = data.fetched_at ? new Date(data.fetched_at).toLocaleTimeString('en-SG',{hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '';
+
+  // Summary header
+  const totColor = total >= 0 ? 'var(--green)' : 'var(--red)';
+  $('pnlTotal').innerHTML = priced === 0
+    ? '<span style="color:var(--amber)">⚠️ No live prices available — check IBKR market data subscriptions</span>'
+    : `<span class="pnl-total" style="color:${totColor}">${fmtUSD(total)}</span>
+       <span style="color:${totColor};font-size:14px;font-weight:600;margin-left:8px">(${fmtPct(totPct)})</span>
+       <span style="color:var(--text-3);font-size:12px;margin-left:10px">${priced}/${total_} positions priced</span>`;
+  $('pnlFetched').textContent = fetched ? `Prices as of ${fetched} SGT` : '';
+
+  if(!pos.length){
+    $('pnlTable').innerHTML = '<div class="empty"><div class="empty-text">No open positions.</div></div>';
+    return;
+  }
+
+  // Sort: available first, then by pnl_pct desc
+  pos.sort((a,b) => {
+    if(a.available !== b.available) return b.available - a.available;
+    return (b.pnl_pct||0) - (a.pnl_pct||0);
+  });
+
+  $('pnlTable').innerHTML = `
+    <div style="overflow-x:auto;margin-top:4px">
+    <table>
+      <thead><tr>
+        <th>Ticker</th>
+        <th>Acct</th>
+        <th>Dir</th>
+        <th>Entry</th>
+        <th>Current</th>
+        <th>Qty</th>
+        <th>P&L %</th>
+        <th>P&L $</th>
+        <th>Stop dist.</th>
+        <th>Source</th>
+      </tr></thead>
+      <tbody>${pos.map(p => {
+        const avail  = p.available;
+        const pos_   = (p.pnl_pct || 0) >= 0;
+        const pnlColor = pos_ ? 'var(--green)' : 'var(--red)';
+
+        // P&L bar
+        const barPct  = avail ? Math.min(Math.abs(p.pnl_pct||0) * 5, 100) : 0;
+        const barColor= pos_ ? '#16A34A' : '#DC2626';
+
+        // Stop distance indicator
+        let stopCell = '<span class="na-cell">—</span>';
+        if(avail && p.dist_to_stop_pct != null){
+          const distCls = p.dist_to_stop_pct < 2 ? 'stop-close' : 'stop-ok';
+          const warn = p.dist_to_stop_pct < 2 ? ' ⚠️' : '';
+          stopCell = `<span class="${distCls}">${fmt(p.dist_to_stop_pct,1)}%${warn}</span>
+            <br><span style="font-size:11px;color:var(--text-4)">to $${fmt(p.calculated_stop,2)}</span>`;
+        } else if(p.calculated_stop && !avail){
+          stopCell = `<span class="na-cell">stop $${fmt(p.calculated_stop,2)}</span>`;
+        }
+
+        return `<tr>
+          <td>
+            <div class="ticker-cell">${p.ticker}</div>
+            <div class="sector-small">${p.sector||''}</div>
+          </td>
+          <td>${acctBadge(p.account)}</td>
+          <td>${dirBadge(p.direction)}</td>
+          <td style="font-weight:500">$${fmt(p.entry_price,2)}</td>
+          <td style="font-weight:600">${avail ? '$'+fmt(p.current_price,2) : '<span class="na-cell">No data</span>'}</td>
+          <td style="color:var(--text-3)">${p.qty}</td>
+          <td>
+            ${avail
+              ? `<div style="display:flex;align-items:center">
+                   <div class="pnl-bar-wrap"><div class="pnl-bar-fill" style="width:${barPct}%;background:${barColor}"></div></div>
+                   <span style="color:${pnlColor};font-weight:600">${fmtPct(p.pnl_pct)}</span>
+                 </div>`
+              : '<span class="na-cell">—</span>'}
+          </td>
+          <td style="font-weight:600;color:${avail?(pos_?'var(--green)':'var(--red)'):'var(--text-4)'}">
+            ${avail ? fmtUSD(p.pnl_usd) : '—'}
+          </td>
+          <td>${stopCell}</td>
+          <td><span style="font-size:11px;color:${p.price_source==='yfinance'?'var(--amber)':'var(--text-4)'}">${p.price_source||'—'}</span></td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div>`;
+}
+
+// ── Init & auto-refresh ───────────────────────────────────────────────────
+fetchAll();
+setInterval(fetchAll, 5 * 60 * 1000);
+</script>
+</body>
+</html>

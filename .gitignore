@@ -1,0 +1,36 @@
+# Never commit these
+.env
+venv/
+__pycache__/
+*.pyc
+settings_a/
+settings_b/
+*.tar.gz
+
+# Live trade data + SQLite history (don't commit)
+data/account_a/*.json
+data/archive/**
+data/snapshots/**
+data/logs/**
+data/*.db
+data/*.db-journal
+
+# Research outputs (regenerated each run)
+trading/research/data/*.json
+
+# Migration backups
+data.backup.*/
+
+# Legacy paths (kept for users not yet migrated)
+phase2/data/*.json
+phase3/data/*.json
+account_a/data/*.json
+account_b/data/*.json
+
+# IB Gateway local state — encrypted credentials + login logs, NEVER commit
+settings/
+settings_a/
+settings_b/
+
+# Plotus operational output (still written by report/plotus/generator.py)
+reports/

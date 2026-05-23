@@ -1,0 +1,116 @@
+╔══════════════════════════════════════════════════════════════╗
+  PLOTUS DAILY REPORT
+  Monday, 18 May 2026
+  Generated: 20:31 SGT
+╚══════════════════════════════════════════════════════════════╝
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 1 — MARKET SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Market breadth today was led by Technology (XLK, +11.49% composite) and Energy (XLE, +7.60%), a combination that typically reflects a risk-on posture alongside residual commodity demand, while the relative strength in Consumer Staples (XLP, +1.37%) suggests some defensive positioning remains in the mix. Healthcare (XLV, -2.66%) was the notable laggard, and we are watching whether that weakness represents sector-specific rotation out of defensives or the beginning of broader risk repricing. On the flow side, dark pool activity concentrated in AMD and HYG warrants attention, as the pairing of a high-beta semiconductor name with a high-yield bond ETF can signal institutional positioning across both equity risk and credit risk simultaneously; the options flow in NVDA and FSLR, with two prints exceeding the $500k threshold, reinforces the view that smart money is directionally active in technology and clean energy. Heading into the next session, the rotation pattern, strength in Technology and Energy combined with softness in Healthcare, is consistent with a risk-on tape, and we will be monitoring whether XLK can sustain its composite momentum or whether the one-week reading of -2.1% flags near-term mean reversion pressure that could limit follow-through.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 2 — SECTOR RANKINGS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # 1 XLK   Technology                +11.49%  ▓▓▓▓▓
+  # 2 XLE   Energy                    +7.60%  ▓▓▓
+  # 3 XLP   Consumer Staples          +1.37%  
+  # 4 XLC   Communication Services    +1.23%  
+  # 5 XLF   Financials                -0.43%  
+  # 6 XLRE  Real Estate               -1.04%  
+  # 7 XLY   Consumer Discretionary    -1.12%  
+  # 8 XLI   Industrials               -2.13%  ▓
+  # 9 XLV   Healthcare                -2.66%  ▓
+  #10 XLB   Materials                 -3.47%  ▓
+  #11 XLU   Utilities                 -3.72%  ▓
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 3 — PLOTUS TRADE ACTIVITY TODAY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  OPENED: NVDA LONG [HIGH] @ $224.8 — NVDA is the dominant name in the strongest sector (XLK #1, +23.7% 3m). Signal convergence: (1) XLK t
+  OPENED: AMD LONG [MEDIUM] @ $423.37 — Two-signal convergence: (1) XLK is the #1 ranked sector with +12.8% 1m momentum, (2) two large dark 
+  OPENED: NEE SHORT [MEDIUM] @ $88.55 — Signal convergence on the short side: (1) XLU is the WORST ranked sector (#11, score -3.72%), (2) ra
+  No positions closed today
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 4 — OPEN POSITIONS (3 active)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  [A] NVDA   LONG  [HIGH]  Entry $224.8  Day 0  Deadline: 2026-07-02
+  [A] AMD    LONG  [MEDIUM]  Entry $423.37  Day 0  Deadline: 2026-07-02
+  [A] NEE    SHORT [MEDIUM]  Entry $88.55  Day 0  Deadline: 2026-07-02
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 5 — PERFORMANCE SNAPSHOT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OVERALL
+  Total trades:  3
+  Win rate:      0%
+  Avg P&L:       +0.00%
+
+A/B TEST
+  Account A (Baseline):  0 trades | 0% WR | avg +0.00%
+  Account B (Learning):  0 trades | 0% WR | avg +0.00%
+  Verdict: Inconclusive — more data needed
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 6 — NEXT SESSION WATCHLIST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PLOTUS WATCHLIST - NEXT TRADING SESSION
+
+1. NVDA (Open Position - Long)
+Watch for continuation above the prior session high on above-average volume. On radar due to sustained leadership within the technology sector and ongoing strength in AI-related capital flows. A clean hold above the intraday pivot with volume expansion into the afternoon session would confirm continued momentum in the existing position.
+
+2. AMD (Open Position - Long)
+Watch for relative strength versus the broader semiconductor group. On radar because AMD has been tracking sector rotation into technology alongside NVDA and any divergence between the two could signal a change in internal sector leadership. Confirmation would come from AMD holding higher lows on a pullback while the sector ETF XLK maintains its bid.
+
+3. NEE (Open Position - Short)
+Watch for failure to reclaim the key overhead level that triggered the initial short thesis. On radar as utilities remain under pressure in a higher-rate environment and NEE has shown consistent distribution in recent sessions. A rejection at resistance with a return to downside price action would confirm the position remains in a favorable structure.
+
+4. XLE - Sector Proxy Focus (Energy Leadership)
+Watch for a breakout or breakdown in the energy ETF as a guide for positioning in the space. On radar because energy has emerged as one of the top rotating sectors and individual names within XLE may offer setups aligned with broader sector flow. A sustained move above the recent consolidation range on volume would signal actionable conditions developing in energy names.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 7 — CONTENT ANGLES FOR TODAY'S POSTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Today's Plotus Content Plan
+
+---
+
+**POST 1:**
+Type: Trade Log
+Hook: *"Plotus just went long on two chip stocks and short on a utility in the same session. Here's exactly why."*
+Key points:
+- NVDA and AMD longs opened simultaneously — what the Plotus system saw in XLK that triggered two entries in the same sector
+- NEE short as the counter-position — how Plotus balances directional risk by fading weakness in an unrelated sector
+- Why three trades opening on the same day isn't noise, it's the system responding to a specific market condition
+
+Content source: Today's three new positions (NVDA LONG, AMD LONG, NEE SHORT), top sector XLK +11.49%
+
+---
+
+**POST 2:**
+Type: Experiment Update
+Hook: *"Win rate: 0%. No closed trades. And that's completely fine — here's what the experiment actually measures right now."*
+Key points:
+- Win rate can't be judged until positions close — what the 0% reading actually means at this stage of the experiment
+- The difference between an open position and a result (why patience is built into the Plotus design)
+- Current state of the portfolio: 3 open positions, 0 exits, and what we're watching next
+
+Content source: 0% win rate, 0 closed trades, 3 open positions
+
+---
+
+**POST 3:**
+Type: Sector Rotation
+Hook: *"One number told Plotus where to focus today: +11.49%. This is how sector rankings drive every decision."*
+Key points:
+- How Plotus uses sector performance rankings as a filter before any individual stock is considered
+- XLK leading the board — what that signal looks like and why it pointed toward semiconductor names specifically
+- The flip side: what sitting at the bottom of the rankings (like utilities) signals for short candidates
+
+Content source: XLK top sector +11.49%, NVDA/AMD longs, NEE short as sector contrast
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+END OF REPORT
+Paper trading only. Not financial advice.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

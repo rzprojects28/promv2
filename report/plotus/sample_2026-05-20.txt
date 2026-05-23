@@ -1,0 +1,120 @@
+╔══════════════════════════════════════════════════════════════╗
+  PLOTUS DAILY REPORT
+  Wednesday, 20 May 2026
+  Generated: 20:30 SGT
+╚══════════════════════════════════════════════════════════════╝
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 1 — MARKET SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Market breadth today was led by Technology (XLK, composite +13.18%), with meaningful support from Energy (XLE, +7.98%) and a modest defensive contribution from Consumer Staples (XLP, +1.51%), suggesting a risk-on tilt with some residual hedging activity in lower-beta names. The weakness in Industrials (XLI, -1.63%) is worth monitoring, as it can signal softening expectations around economic output and capex cycles, and its divergence from the broader move warrants attention heading into the next session. On the flow side, we observed dark pool activity concentrated in MU, QQQ, LHX, and SMCI, with five prints exceeding the $1M threshold, pointing to institutional positioning rather than retail-driven momentum, while a single significant options flow print in ALAB above $500K suggests a more targeted directional conviction in that name. The rotation pattern, with Technology extending its one-month trend and Energy showing near-term relative strength while Industrials lag, implies the market may be rewarding growth and commodity exposure while fading cyclical names tied to broader economic expansion, a dynamic we will continue to track for confirmation or reversal at the open tomorrow.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 2 — SECTOR RANKINGS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # 1 XLK   Technology                +13.18%  ▓▓▓▓▓▓
+  # 2 XLE   Energy                    +7.98%  ▓▓▓
+  # 3 XLP   Consumer Staples          +1.51%  
+  # 4 XLRE  Real Estate               +1.24%  
+  # 5 XLF   Financials                -0.61%  
+  # 6 XLY   Consumer Discretionary    -0.90%  
+  # 7 XLC   Communication Services    -1.02%  
+  # 8 XLU   Utilities                 -1.52%  
+  # 9 XLI   Industrials               -1.63%  
+  #10 XLV   Healthcare                -1.89%  
+  #11 XLB   Materials                 -5.04%  ▓▓
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 3 — PLOTUS TRADE ACTIVITY TODAY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  OPENED: DOW SHORT [MEDIUM] @ $36.21 — XLB is the worst-ranked sector (-5.04% score) and DOW is one of the weakest commodity chemical names
+  CLOSED: NEE SHORT P&L: -0.8% — Stop price breached: NEE at $89.27, stop was $75.50 (short)
+  CLOSED: NEM SHORT P&L: +2.2% — Stop price breached: NEM at $106.65, stop was $65.00 (short)
+  CLOSED: NUE SHORT P&L: -0.3% — Stop price breached: NUE at $223.94, stop was $135.00 (short)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 4 — OPEN POSITIONS (7 active)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  [A] NVDA   LONG  [HIGH]  Entry $224.8  Day 2  Deadline: 2026-07-02
+  [A] AMD    LONG  [MEDIUM]  Entry $423.37  Day 2  Deadline: 2026-07-02
+  [A] META   LONG  [MEDIUM]  Entry $603.27  Day 1  Deadline: 2026-07-03
+  [A] DOW    SHORT [MEDIUM]  Entry $36.21  Day 0  Deadline: 2026-07-04
+  [B] NVDA   LONG  [HIGH]  Entry $223.65  Day 1  Deadline: 2026-07-03
+  [B] MU     LONG  [MEDIUM]  Entry $718.55  Day 1  Deadline: 2026-07-03
+  [B] DOW    SHORT [MEDIUM]  Entry $37.66  Day 1  Deadline: 2026-07-03
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 5 — PERFORMANCE SNAPSHOT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OVERALL
+  Total trades:  10
+  Win rate:      33.3%
+  Avg P&L:       +0.38%
+
+A/B TEST
+  Account A (Baseline):  3 trades | 33.3% WR | avg +0.38%
+  Account B (Learning):  0 trades | 0% WR | avg +0.00%
+  Verdict: Baseline ahead
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 6 — NEXT SESSION WATCHLIST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Plotus Watchlist - Next Trading Session
+
+1. MU (Micron Technology)
+Watch for continuation of today's momentum or any signs of exhaustion near recent highs. MU is already a live position and sits within a strong technology sector backdrop. Semiconductor names are seeing consistent flow and MU has been on the thesis radar. Confirmation would come from price holding above the prior session close on above-average volume, suggesting institutional participation is sustaining the move.
+
+2. ALAB (Astera Labs)
+Carried over from today's thesis consideration. ALAB operates in the high-bandwidth connectivity space closely tied to AI infrastructure demand, keeping it aligned with XLK leadership. The name has not yet produced a clean entry. Confirmation would be a defined range contraction followed by a decisive expansion in the direction of the prevailing trend, ideally on volume that exceeds the 20-day average.
+
+3. NVDA (Nvidia Corporation)
+Active long position with continued relevance given sector dominance. Watch for any intraday pullback that tests a well-defined support level without breaking structure. The key signal to monitor is whether dip buyers step in at a logical technical level, which would reinforce the existing thesis and potentially allow for position management decisions.
+
+4. DOW (Dow Inc.)
+Two short positions are already active. Watch for any relief bounce that fails to reclaim a meaningful resistance level. A failed recovery attempt on lighter volume would confirm continued weakness in line with the current thesis and provide context for managing the existing exposure into the next session.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 7 — CONTENT ANGLES FOR TODAY'S POSTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Plotus Content Brief — Today's 3 Post Angles
+
+---
+
+**POST 1:**
+Type: Trade Log
+Hook: *"3 trades closed today. One winner. Two losers. Here's exactly why that's fine."*
+Key points:
+- Break down all three exits: NEM SHORT (+2.2% winner), NEE SHORT (-0.8%) and NUE SHORT (-0.3%) losers — show the actual numbers without spin
+- Demonstrate that the two losses were small and controlled, while the winner covered both — this is position sizing working as intended
+- Honest framing: Plotus doesn't chase perfection, it chases asymmetry
+
+Content source: Closed trades — NEE SHORT -0.8%, NEM SHORT +2.2%, NUE SHORT -0.3%
+
+---
+
+**POST 2:**
+Type: Experiment Update
+Hook: *"Win rate sitting at 33.3%. Most traders would panic. Plotus is built for this."*
+Key points:
+- Surface the 33.3% win rate and reframe it — a system can be profitable while losing more often than it wins if the math is right
+- Show the current state of the experiment: 7 open positions, 1 new short opened today (DOW), the portfolio is still actively working
+- Remind followers this is a live, unfiltered experiment — the ugly numbers stay in the feed
+
+Content source: Overall win rate 33.3%, open positions 7, DOW SHORT opened today
+
+---
+
+**POST 3:**
+Type: Sector Rotation
+Hook: *"While Plotus is shorting industrials and utilities, one sector is quietly doing all the heavy lifting."*
+Key points:
+- Spotlight XLK (Technology) at +13.18% as the top-performing sector in the current rankings
+- Explain what sector rotation signals look like — when one sector dominates, it tells you where institutional money is flowing and where it isn't
+- Connect it to today's short positions in DOW (Industrials) and the closed NUE trade (Materials) — Plotus is leaning against the weak sectors, not fighting the strong one
+
+Content source: Top sector XLK +13.18%, DOW SHORT, NUE SHORT exit
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+END OF REPORT
+Paper trading only. Not financial advice.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

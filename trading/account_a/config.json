@@ -1,0 +1,19 @@
+{
+  "account": "A",
+  "label": "Baseline",
+  "ibkr_port": 4002,
+  "self_improving": false,
+  "ab_test": {
+    "group": "no_learning",
+    "description": "Control group \u2014 standard Analysis Agent, no historical learning"
+  },
+  "journal": {
+    "runs_every_n_days": 7,
+    "last_run": "2026-05-20"
+  },
+  "learning": {
+    "max_patterns_to_inject": 5,
+    "min_trades_for_pattern": 2,
+    "lookback_trades": 20
+  }
+}

@@ -1,0 +1,21 @@
+services:
+
+  # Account A — paper account
+  ib-gateway-a:
+    image: ghcr.io/gnzsnz/ib-gateway:stable
+    restart: always
+    environment:
+      TWS_USERID:   "${TWS_USERID_A}"
+      TWS_PASSWORD: "${TWS_PASSWORD_A}"
+      TRADING_MODE: paper
+      READ_ONLY_API: "no"
+      TWS_SETTINGS_PATH: /home/ibgateway/settings_a
+    ports:
+      - "127.0.0.1:4002:4004"
+    volumes:
+      - ./settings_a:/home/ibgateway/settings_a
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "4004"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
