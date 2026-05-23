@@ -330,7 +330,28 @@ def run(data_dir=None, ib_port=None, ib_client_id=None):
         print("[Monitor Agent v2] No open positions.")
         return {'still_open': [], 'closed': []}
 
-    print(f"  {len(open_positions)} open position(s) | Port: {ib_port}")
+    # ── Market hours gate ──
+    # Monitor evaluates exit triggers AND submits close orders. If market is
+    # closed, the close wouldn't fill and we'd corrupt closed_positions.json
+    # with a "closed" record while IBKR still holds the position. Refuse to
+    # run entirely; next run (when market open) catches up.
+    import sys as _sys, os as _os
+    _exec_dir = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))), 'execution')
+    if _exec_dir not in _sys.path:
+        _sys.path.insert(0, _exec_dir)
+    from market_hours import is_us_market_open, minutes_until_open
+    is_open, mh_reason = is_us_market_open()
+    if not is_open:
+        mins = minutes_until_open()
+        suffix = f" (opens in {mins} min)" if mins else ""
+        print(f"[Monitor Agent v2] ⏸ Skipping — market closed: {mh_reason}{suffix}")
+        try:
+            tg.send(f"⏸ Monitor skipped — market closed: {mh_reason}{suffix}")
+        except Exception:
+            pass
+        return {'still_open': open_positions, 'closed': []}
+
+    print(f"  {len(open_positions)} open position(s) | Port: {ib_port} | {mh_reason}")
 
     ib = IB()
     try:

@@ -330,7 +330,23 @@ def run():
         print("[Execution Agent v2] No approved trades today.")
         return []
 
-    print(f"  {len(approved)} approved trade(s)")
+    # ── Market hours gate ──
+    # Refuse to submit orders when US equity/options market is closed.
+    # Research + risk validation can still run any time; only execution gates.
+    from market_hours import is_us_market_open, minutes_until_open
+    is_open, reason = is_us_market_open()
+    if not is_open:
+        mins = minutes_until_open()
+        suffix = f" (opens in {mins} min)" if mins else ""
+        msg = f"⏸ Execution skipped — market closed: {reason}{suffix}"
+        print(f"[Execution Agent v2] {msg}")
+        try:
+            tg.send(msg)
+        except Exception:
+            pass
+        return []
+
+    print(f"  {len(approved)} approved trade(s) — {reason}")
 
     from ib_insync import IB
     ib = IB()

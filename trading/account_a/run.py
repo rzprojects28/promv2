@@ -174,6 +174,17 @@ def _run_monitor(data_dir):
 
     open_positions   = load_json(os.path.join(data_dir, 'open_positions.json'), [])
     closed_positions = load_json(os.path.join(data_dir, 'closed_positions.json'), [])
+
+    # ── Market hours gate — see trading/monitor/monitor_agent.py for rationale.
+    sys.path.insert(0, EXEC_DIR)
+    from market_hours import is_us_market_open, minutes_until_open
+    is_open, mh_reason = is_us_market_open()
+    if not is_open:
+        mins = minutes_until_open()
+        suffix = f" (opens in {mins} min)" if mins else ""
+        print(f"  [_run_monitor] ⏸ market closed: {mh_reason}{suffix}")
+        return {'still_open': open_positions, 'closed': []}
+
     if not open_positions:
         return {'still_open': [], 'closed': []}
 
