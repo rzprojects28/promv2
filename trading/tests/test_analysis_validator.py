@@ -149,5 +149,127 @@ class TestValidator(unittest.TestCase):
         self.assertTrue(ok)
 
 
+class TestOptionsValidation(unittest.TestCase):
+    """Validator must also enforce the options-instrument rules."""
+
+    def setUp(self):
+        # Add execution/ to path so analysis_validator can find options_builder
+        exec_dir = os.path.join(ROOT, 'trading', 'execution')
+        if exec_dir not in sys.path:
+            sys.path.insert(0, exec_dir)
+        from datetime import date
+        self.today = date(2026, 5, 23)   # stable DTE math
+
+    def _options_thesis(self, **structure_overrides):
+        """Build a base valid options thesis."""
+        structure = {
+            "type": "bull_call_spread",
+            "underlying": "AAPL",
+            "legs": [
+                {"action": "BUY",  "right": "C", "strike": 148, "expiry": "2026-07-18", "ratio": 1},
+                {"action": "SELL", "right": "C", "strike": 155, "expiry": "2026-07-18", "ratio": 1},
+            ],
+            "earnings_catalyst": True,
+        }
+        structure.update(structure_overrides)
+        return {
+            "ticker": "AAPL",
+            "entry_price": 150.00,
+            "invalidation_conditions": "below $147",
+            "instrument": "options",
+            "options_structure": structure,
+            "reward_to_risk": 3.0,
+        }
+
+    def test_valid_options_thesis_passes(self):
+        ok, reason = _validate_thesis(self._options_thesis(),
+                                      PRICES_LIVE, today=self.today)
+        self.assertTrue(ok, reason)
+
+    def test_missing_options_structure_rejected(self):
+        t = self._options_thesis()
+        del t['options_structure']
+        ok, reason = _validate_thesis(t, PRICES_LIVE, today=self.today)
+        self.assertFalse(ok)
+        self.assertIn('options_structure missing', reason)
+
+    def test_naked_short_call_rejected(self):
+        t = self._options_thesis(
+            type="naked_short_call",
+            legs=[{"action": "SELL", "right": "C", "strike": 160,
+                   "expiry": "2026-07-18", "ratio": 1}],
+        )
+        ok, reason = _validate_thesis(t, PRICES_LIVE, today=self.today)
+        self.assertFalse(ok)
+        self.assertIn('blocked', reason)
+
+    def test_iron_condor_rejected(self):
+        t = self._options_thesis(type="iron_condor", legs=[])
+        ok, reason = _validate_thesis(t, PRICES_LIVE, today=self.today)
+        self.assertFalse(ok)
+        self.assertIn('blocked', reason)
+
+    def test_dte_too_short_rejected(self):
+        t = self._options_thesis(
+            legs=[
+                {"action": "BUY",  "right": "C", "strike": 148, "expiry": "2026-06-05", "ratio": 1},
+                {"action": "SELL", "right": "C", "strike": 155, "expiry": "2026-06-05", "ratio": 1},
+            ],
+        )
+        ok, reason = _validate_thesis(t, PRICES_LIVE, today=self.today)
+        self.assertFalse(ok)
+        self.assertIn('outside 30-60', reason)
+
+    def test_reward_to_risk_below_2_rejected(self):
+        t = self._options_thesis()
+        t['reward_to_risk'] = 1.5
+        ok, reason = _validate_thesis(t, PRICES_LIVE, today=self.today)
+        self.assertFalse(ok)
+        self.assertIn('reward_to_risk', reason)
+
+    def test_reward_to_risk_omitted_allowed(self):
+        # If RR isn't provided, we don't reject — execution_agent recomputes from live prices
+        t = self._options_thesis()
+        del t['reward_to_risk']
+        ok, reason = _validate_thesis(t, PRICES_LIVE, today=self.today)
+        self.assertTrue(ok, reason)
+
+    def test_underlying_mismatch_rejected(self):
+        t = self._options_thesis(underlying="TSLA")
+        ok, reason = _validate_thesis(t, PRICES_LIVE, today=self.today)
+        self.assertFalse(ok)
+        self.assertIn('underlying mismatch', reason)
+
+    def test_inverted_bull_call_spread_rejected(self):
+        t = self._options_thesis(
+            legs=[
+                {"action": "BUY",  "right": "C", "strike": 160, "expiry": "2026-07-18", "ratio": 1},
+                {"action": "SELL", "right": "C", "strike": 148, "expiry": "2026-07-18", "ratio": 1},
+            ],
+        )
+        ok, reason = _validate_thesis(t, PRICES_LIVE, today=self.today)
+        self.assertFalse(ok)
+        self.assertIn('BUY strike must be lower', reason)
+
+    def test_stock_instrument_still_validated(self):
+        # Stock thesis shouldn't be affected by options-validation path
+        stock = {
+            "ticker": "AAPL", "entry_price": 150.00,
+            "invalidation_conditions": "below $147",
+            "instrument": "stock",
+        }
+        ok, reason = _validate_thesis(stock, PRICES_LIVE, today=self.today)
+        self.assertTrue(ok, reason)
+
+    def test_default_instrument_is_stock(self):
+        # No instrument field → treated as stock (backwards compat)
+        stock = {
+            "ticker": "AAPL", "entry_price": 150.00,
+            "invalidation_conditions": "below $147",
+        }
+        ok, reason = _validate_thesis(stock, PRICES_LIVE, today=self.today)
+        self.assertTrue(ok, reason)
+
+
 if __name__ == '__main__':
     unittest.main()

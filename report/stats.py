@@ -134,8 +134,23 @@ def position_live_risk_usd(position: Mapping, current_price: Optional[float]) ->
 def position_unrealized(position: Mapping, current_price: Optional[float]) -> dict:
     """
     Compute unrealized $ and % for a single open position.
-    If current_price is missing, returns None values and available=False.
+
+    For stock positions, current_price is the share price.
+    For options positions, the share price is meaningless for P&L
+    (the combo's premium has its own price). We mark options positions as
+    "unavailable" here so they don't garble the aggregate unrealized.
+    Live combo pricing is a v2 feature.
     """
+    instrument = (position.get("instrument") or "stock").lower()
+    if instrument == "options":
+        return {
+            "ticker":         position.get("ticker"),
+            "current_price":  current_price,
+            "unrealized_usd": None,
+            "unrealized_pct": None,
+            "available":      False,
+        }
+
     entry = safe_float(position.get("entry_price"))
     qty = int(safe_float(position.get("entry_qty"), 0))
     size_usd = safe_float(position.get("entry_size_usd"))
@@ -213,6 +228,8 @@ def compute_daily_stats(
             "ticker":            ticker,
             "direction":         p.get("direction"),
             "conviction":        p.get("conviction"),
+            "instrument":        (p.get("instrument") or "stock").lower(),
+            "options_structure": p.get("options_structure"),
             "entry_price":       safe_float(p.get("entry_price")),
             "entry_qty":         int(safe_float(p.get("entry_qty"), 0)),
             "entry_size_usd":    size_usd,

@@ -10,6 +10,7 @@ The downstream risk manager is the source of truth for sizing logic; this
 validator just confirms what the AI produced is parseable.
 """
 import re
+from datetime import date
 from typing import Optional
 
 
@@ -44,10 +45,16 @@ def extract_stop_price(invalidation_text: str, entry_price: float) -> Optional[f
     return min(candidates, key=lambda x: abs(x - entry_price)) if candidates else None
 
 
-def validate_thesis(thesis: dict, prices: dict) -> tuple[bool, str]:
+def validate_thesis(thesis: dict, prices: dict, today: Optional[date] = None) -> tuple[bool, str]:
     """
     Validate a Claude-generated thesis against the live data we actually fetched.
     Returns (is_valid, reason). Drop the thesis if is_valid is False.
+
+    For options-instrument theses, also validates:
+      - options_structure parses cleanly via options_builder
+      - structure type is not in the blocked set (naked shorts, iron condors, ...)
+      - expiry DTE falls in the allowed window for the structure
+      - reward_to_risk (if provided by the model) is >= 2.0
     """
     if not isinstance(thesis, dict):
         return False, "thesis is not a dict"
@@ -81,5 +88,65 @@ def validate_thesis(thesis: dict, prices: dict) -> tuple[bool, str]:
     if stop is None:
         snippet = (inv or '')[:80]
         return False, f"{ticker} no parseable stop in invalidation_conditions: {snippet!r}"
+
+    # ── Options-specific validation ────────────────────────────────────────
+    instrument = (thesis.get('instrument') or 'stock').lower()
+    if instrument == 'options':
+        ok, reason = _validate_options_structure(thesis, ticker, today)
+        if not ok:
+            return False, reason
+
+    return True, "ok"
+
+
+def _validate_options_structure(thesis: dict, ticker: str,
+                                today: Optional[date]) -> tuple[bool, str]:
+    """
+    Validate the options_structure JSON object embedded in an options thesis.
+    Delegates structure parsing to options_builder and adds the
+    reward-to-risk gate that's specific to ITPM doctrine.
+    """
+    import os, sys
+    # Allow this module to find options_builder regardless of how it was imported.
+    _here = os.path.dirname(os.path.abspath(__file__))
+    _exec = os.path.join(os.path.dirname(_here), 'execution')
+    if _exec not in sys.path:
+        sys.path.insert(0, _exec)
+    from options_builder import parse_options_structure, check_dte_bounds
+
+    structure_dict = thesis.get('options_structure')
+    if not structure_dict:
+        return False, f"{ticker} instrument=options but options_structure missing"
+
+    if not isinstance(structure_dict, dict):
+        return False, (f"{ticker} options_structure must be a dict, "
+                       f"got {type(structure_dict).__name__}")
+
+    # If underlying not specified, inject from ticker
+    structure_dict.setdefault('underlying', ticker)
+
+    if (structure_dict.get('underlying') or '').upper() != ticker:
+        return False, (f"{ticker} options_structure.underlying mismatch "
+                       f"({structure_dict.get('underlying')!r})")
+
+    try:
+        structure = parse_options_structure(structure_dict)
+    except ValueError as e:
+        return False, f"{ticker} options_structure invalid: {e}"
+
+    ok, reason = check_dte_bounds(structure, today)
+    if not ok:
+        return False, f"{ticker} {reason}"
+
+    # Reward-to-risk gate (ITPM 3:1 target; we accept 2.0+ as floor)
+    rr = thesis.get('reward_to_risk')
+    if rr is not None:
+        try:
+            rr_f = float(rr)
+            if rr_f < 2.0:
+                return False, (f"{ticker} reward_to_risk {rr_f:.2f} below 2.0 "
+                               f"(ITPM target 3:1, floor 2:1)")
+        except (TypeError, ValueError):
+            return False, f"{ticker} reward_to_risk not numeric: {rr!r}"
 
     return True, "ok"

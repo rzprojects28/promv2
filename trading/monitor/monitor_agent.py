@@ -184,6 +184,18 @@ JSON only: {{"invalidation_triggered": true/false, "condition_triggered": "<exac
 
 
 def close_position(ib, position, exit_price):
+    """
+    Dispatch close to the right path based on instrument type.
+    For options positions, reverses the combo (each leg's action flipped)
+    and submits as a single market-ish order to flatten.
+    """
+    instrument = (position.get('instrument') or 'stock').lower()
+    if instrument == 'options':
+        return _close_options_position(ib, position)
+    return _close_stock_position(ib, position, exit_price)
+
+
+def _close_stock_position(ib, position, exit_price):
     ticker    = position.get('ticker', '')
     direction = position.get('direction', '')
     qty       = position.get('entry_qty', 1)
@@ -201,6 +213,99 @@ def close_position(ib, position, exit_price):
     except Exception as e:
         print(f"    Close order error: {e}")
         return exit_price
+
+
+def _close_options_position(ib, position):
+    """
+    Close an options structure by reversing every leg.
+
+    For singles: places a single Option order with action flipped.
+    For combos: rebuilds the Bag with each ComboLeg's action flipped and
+    submits a single combo order at a wide limit (mid +/- 0.05) to flatten.
+
+    Returns the limit price submitted (the net debit/credit per contract,
+    in USD per share — multiply by 100 for per-contract).
+    """
+    import sys as _sys, os as _os
+    _exec_dir = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))), 'execution')
+    if _exec_dir not in _sys.path:
+        _sys.path.insert(0, _exec_dir)
+    import options_builder as ob
+    from ib_insync import Option, Bag, ComboLeg, LimitOrder
+
+    raw       = position.get('options_structure') or {}
+    raw.setdefault('underlying', position.get('ticker', ''))
+    contracts = int(position.get('entry_qty', 1))
+    ticker    = position.get('ticker', '')
+
+    try:
+        structure = ob.parse_options_structure(raw)
+    except ValueError as e:
+        print(f"    Close error — can't parse stored options_structure: {e}")
+        return None
+
+    # Build + qualify option contracts
+    raw_options = []
+    for leg in structure.legs:
+        raw_options.append(Option(
+            symbol=structure.underlying,
+            lastTradeDateOrContractMonth=leg.to_ibkr_expiry(),
+            strike=leg.strike,
+            right=leg.right,
+            exchange='SMART',
+            currency='USD',
+            tradingClass=structure.underlying,
+        ))
+    try:
+        qualified = ib.qualifyContracts(*raw_options)
+    except Exception as e:
+        print(f"    Close error — qualify failed: {e}")
+        return None
+    if any(not q or not getattr(q, 'conId', None) for q in qualified):
+        print(f"    Close error — one or more legs missing")
+        return None
+
+    # Flip action for close
+    def flip(action: str) -> str:
+        return 'SELL' if action == 'BUY' else 'BUY'
+
+    try:
+        if structure.is_single_leg():
+            leg     = structure.legs[0]
+            close_action = flip(leg.action)
+            # Market-style close: use a passive limit that should fill quickly
+            order = LimitOrder(close_action, contracts * leg.ratio, 0.01)
+            order.tif = 'DAY'
+            order.outsideRth = False
+            ib.placeOrder(qualified[0], order)
+            ib.sleep(2)
+            print(f"    Closing OPTIONS [single] {close_action} {contracts}×{ticker} "
+                  f"{leg.right}{leg.strike}/{leg.expiry}")
+            return 0.01
+
+        # Multi-leg combo
+        combo_legs = []
+        for q, leg in zip(qualified, structure.legs):
+            combo_legs.append(ComboLeg(
+                conId=q.conId,
+                ratio=leg.ratio,
+                action=flip(leg.action),
+                exchange='SMART',
+            ))
+        bag = Bag(symbol=structure.underlying, exchange='SMART',
+                  currency='USD', comboLegs=combo_legs)
+        # When flipped: a position opened as net debit closes as net credit, and vice versa.
+        # Use a very passive limit (0.01) to ensure fill — combo MKT is unreliable.
+        order = LimitOrder('SELL' if structure.net_action() == 'debit' else 'BUY',
+                            contracts, 0.01)
+        order.tif = 'DAY'
+        ib.placeOrder(bag, order)
+        ib.sleep(2)
+        print(f"    Closing OPTIONS [combo] {structure.type} × {contracts} {ticker}")
+        return 0.01
+    except Exception as e:
+        print(f"    Close order error: {e}")
+        return None
 
 
 def run(data_dir=None, ib_port=None, ib_client_id=None):

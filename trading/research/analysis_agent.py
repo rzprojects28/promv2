@@ -106,38 +106,73 @@ Stock selection process (use ONLY live data provided):
 4. Which technical setup is favourable per the TECHNICAL LEVELS block?
 5. Pick the ONE stock with the most signal convergence per sector.
 
-Options strategy rules (use the IV DATA block for current IV per ticker):
-- Ticker IV regime LOW (under 20%): BUY long calls or puts outright
-- Ticker IV regime NORMAL_LOW (20-35%): Long options preferred, spreads acceptable
-- Ticker IV regime NORMAL_HIGH (35-55%): Mixed — vertical spreads recommended
-- Ticker IV regime HIGH (over 55%): SELL premium via vertical spreads
-- Use ONLY the expiry dates from the OPTIONS EXPIRY WINDOW
-- Manage at 21 DTE
+ITPM OPTIONS STRATEGY MAP (use the IV DATA block for current IV regime per ticker):
+
+  IV regime LOW (<25th %ile)      bullish → LONG_CALL                                bearish → LONG_PUT
+  IV regime NORMAL (25-65th)      bullish → BULL_CALL_SPREAD (debit)                 bearish → BEAR_PUT_SPREAD (debit)
+  IV regime HIGH (>65th %ile)     bullish → BULL_PUT_SPREAD (credit)                 bearish → BEAR_CALL_SPREAD (credit)
+  IV regime HIGH + earnings ≤30d  bullish → CALENDAR_RATIO_CALL_SPREAD (asymmetric)  bearish → CALENDAR_RATIO_PUT_SPREAD
+
+BLOCKED structures (the validator will reject them — do NOT emit):
+  naked_short_call, naked_short_put (undefined risk)
+  iron_condor, iron_butterfly, short_strangle, short_straddle (not ITPM workhorses)
+  strip_straddle, strap_strangle, strip_strangle (deferred to a later version)
+  long_straddle, long_strangle (rare in ITPM Flash examples)
+
+EXPIRY WINDOW (validator enforces):
+- Verticals + single options: pick expiry 30-60 DTE from today
+- Calendars / diagonals / calendar-ratios: short leg 7-45 DTE, long leg 45-120 DTE
+- Use ONLY the expiry dates from the OPTIONS EXPIRY WINDOW block
+
+EARNINGS RULE:
+- If the expiry SPANS an upcoming earnings date (per EARNINGS CALENDAR), set "earnings_catalyst": true
+  AND the trade thesis must explicitly use earnings as the catalyst.
+- If you're proposing a long single option whose expiry spans earnings WITHOUT an earnings thesis,
+  DO NOT — IV crush after earnings will destroy the position. Pick a different expiry or different structure.
+
+REWARD-TO-RISK RULE (ITPM 3:1 target):
+- Estimate reward_to_risk as: expected_gain_per_contract / max_loss_per_contract
+- Validator REJECTS any thesis with reward_to_risk < 2.0
+- Aim for >= 3.0
 
 POSITION SIZING — ITPM METHOD:
-- Use entry_price from the LIVE PRICES block
-- Use stop price from the TECHNICAL LEVELS suggested stop (or tighter if catalyst-specific)
-- Risk Manager calculates: Max loss = 0.5% of portfolio / Risk per share = Entry - Stop
+- Use entry_price (of the underlying) from the LIVE PRICES block
+- Use stop price (of the underlying) from the TECHNICAL LEVELS suggested stop
+- Risk Manager calculates contract count: Max loss = 0.5% of portfolio / Max loss per contract
+- For options the underlying-stop is NOT used for sizing — it's used for the invalidation gate the monitor uses
+- You should NOT set entry_qty or position_size_pct for options — risk_manager computes contracts
 
-INVALIDATION FORMAT (MANDATORY — parser requirement):
-The downstream risk manager extracts the stop price from invalidation_conditions via regex.
+INVALIDATION FORMAT (MANDATORY for stocks AND options — parser requirement):
+The risk manager extracts the underlying stop price from invalidation_conditions via regex.
 Your invalidation_conditions text MUST contain a numeric price level in one of these forms:
   "$118.50"  |  "below 118"  |  "under 118.50"  |  "118 support"  |  "breaks 118"
 The matched price must be within 30% of entry_price (sanity gate).
-If you cannot supply a price level from the TECHNICAL LEVELS block, DROP the thesis. Do not propose a trade without a parseable stop — the risk manager will fall back to oversized conviction-based sizing with no stop loss, which is unsafe.
+For options, this stop is the UNDERLYING price level that invalidates the directional thesis
+(e.g. "underlying closes below $147"). When breached, the monitor closes the entire options structure.
 
-Output fields per trade (ALL required):
-- ticker
-- direction (LONG or SHORT)
-- conviction (HIGH / MEDIUM / LOW)
-- sector (which sector ETF this stock belongs to)
-- entry_price (MUST match the LIVE PRICES block exactly)
-- core_thesis (must reference specific live data points — sectors, EPS revisions, IV, technical setup)
-- catalyst (MUST use the upcoming earnings dates from the calendar provided)
-- options_structure (MUST use the IV regime and expiry dates provided)
-- invalidation_conditions (MUST include specific price level — see INVALIDATION FORMAT above)
-- hard_time_limit (calculate as TODAY + N weeks, show the actual ISO date)
-- position_size_pct (HIGH=4%, MEDIUM=3%, LOW=2%)
+OUTPUT — JSON array. Each thesis is an object with ALL of these fields:
+
+  {
+    "ticker":           "<UNDERLYING STOCK TICKER>",
+    "direction":        "LONG" or "SHORT",
+    "conviction":       "HIGH" or "MEDIUM" or "LOW",
+    "sector":           "Technology (XLK)",
+    "entry_price":      <UNDERLYING price from LIVE PRICES — exact>,
+    "core_thesis":      "<reference live data points: sector rank, EPS revision, IV, technical setup>",
+    "catalyst":         "<upcoming earnings date or other dated catalyst>",
+    "invalidation_conditions": "underlying closes below $X (from TECHNICAL LEVELS)",
+    "hard_time_limit":  "<YYYY-MM-DD = TODAY + ~6 weeks>",
+    "instrument":       "options",
+    "options_structure": {
+      "type":              "<one of: long_call, long_put, bull_call_spread, bear_put_spread, bull_put_spread, bear_call_spread, calendar_call_spread, calendar_put_spread, calendar_ratio_call_spread, calendar_ratio_put_spread, diagonal_call_spread, diagonal_put_spread, covered_call>",
+      "underlying":        "<same as ticker>",
+      "legs": [
+        {"action": "BUY"|"SELL", "right": "C"|"P", "strike": <number>, "expiry": "YYYY-MM-DD", "ratio": 1}
+      ],
+      "earnings_catalyst": true|false
+    },
+    "reward_to_risk":   <expected_gain_per_contract / max_loss_per_contract, must be >= 2.0>
+  }
 
 Generate 2-3 ideas. Only where 2+ signals align. Return an empty array if no thesis meets the bar.
 Respond ONLY with valid JSON array. No markdown. No preamble."""
@@ -332,7 +367,7 @@ REQUIREMENTS:
         # ── POST-GENERATION VALIDATION (drop hallucinated theses) ──
         validated, rejected = [], []
         for t in theses:
-            ok, reason = _validate_thesis(t, priced)
+            ok, reason = _validate_thesis(t, priced, today=datetime.now().date())
             if ok:
                 t['learning_mode']  = learning_mode
                 t['generated_date'] = today_str

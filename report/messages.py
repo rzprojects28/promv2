@@ -61,10 +61,22 @@ def build_daily_message(stats: dict) -> str:
             up     = p.get("unrealized_pct")
             up_str = f"{up:+.1f}%" if up is not None else "  N/A"
             bar    = "▲" if (up or 0) >= 0 else "▼"
-            lines.append(
-                f"  {bar} {p['ticker']:<6} {p.get('direction','?'):<5} "
-                f"{up_str}  (entry ${p['entry_price']:.2f})"
-            )
+            instr  = (p.get("instrument") or "stock").lower()
+            if instr == "options":
+                # Render options structure compactly: type, contracts, max risk
+                struct = p.get("options_structure") or {}
+                t      = (struct.get("type") or "options").replace("_", " ").upper()
+                qty    = p.get("entry_qty", 0)
+                risk   = p.get("entry_size_usd", 0)
+                lines.append(
+                    f"  ◆ {p['ticker']:<6} {t}  ×{qty} contracts  "
+                    f"(max risk {ccy} {risk:,.0f})"
+                )
+            else:
+                lines.append(
+                    f"  {bar} {p['ticker']:<6} {p.get('direction','?'):<5} "
+                    f"{up_str}  (entry ${p['entry_price']:.2f})"
+                )
 
     # ── Today's decisions (risk-gate output) ──
     approved = stats.get("approved_today") or []

@@ -109,91 +109,20 @@ def run():
         print(f"  Risk Manager failed: {e}")
 
     # ── Execution ─────────────────────────────────────────────
+    # Delegated to trading.execution.execution_agent so the options-vs-stock
+    # dispatch lives in one place. The agent reads PROMETHEUS_DATA_DIR for
+    # the account's data folder and respects IB_PORT / IB_CLIENT_EXEC.
     executed = []
     approved_count = len((risk_result or {}).get('approved', []))
     if approved_count > 0:
-        print(f"[A-2/4] Executing {approved_count} trade(s) on Account A...")
+        print(f"[A-2/4] Executing {approved_count} trade(s) via execution_agent...")
         try:
-            from ib_insync import IB, Stock, LimitOrder
-            import math
-
-            ib = IB()
-            ib.connect('127.0.0.1', int(os.environ['IB_PORT']),
-                       clientId=int(os.environ['IB_CLIENT_EXEC']))
-            ib.reqMarketDataType(4)  # Use delayed data
-
-            open_positions = load_json(os.path.join(data_dir, 'open_positions.json'), [])
-            account_vals   = ib.accountValues()
-            account_value  = 100_000
-            for av in account_vals:
-                if av.tag == 'NetLiquidation' and av.currency == 'USD':
-                    account_value = float(av.value)
-
-            for thesis in risk_result['approved']:
-                ticker    = thesis.get('ticker', '')
-                direction = thesis.get('direction', 'LONG')
-                size_pct  = float(thesis.get('position_size_pct', 3.0))
-                size_usd  = account_value * (size_pct / 100)
-
-                try:
-                    contract = Stock(ticker, 'SMART', 'USD')
-                    ib.qualifyContracts(contract)
-                    td = ib.reqMktData(contract, '', False, False)
-                    ib.sleep(3)
-                    bid = td.bid or 0
-                    ask = td.ask or 0
-                    price = round((bid + ask) / 2, 2) if (bid > 0 and ask > 0 and not math.isnan(bid)) else 0
-                    if not price:
-                        for attr in ['last', 'close']:
-                            v = getattr(td, attr, None)
-                            if v and not math.isnan(v) and v > 0:
-                                price = round(v, 2)
-                                break
-                    # ── yfinance fallback (after-hours / no live feed) ──
-                    if not price:
-                        try:
-                            import yfinance as yf
-                            hist = yf.Ticker(ticker).fast_info
-                            p = getattr(hist, 'last_price', None) or getattr(hist, 'previous_close', None)
-                            if p and p > 0:
-                                price = round(float(p), 2)
-                                print(f"  Using yfinance price for {ticker}: ${price}")
-                        except Exception as ye:
-                            print(f"  yfinance fallback failed for {ticker}: {ye}")
-                    if not price:
-                        print(f"  No price for {ticker} — skipping")
-                        continue
-
-                    qty    = max(1, int(size_usd / price))
-                    action = 'BUY' if direction == 'LONG' else 'SELL'
-                    order  = LimitOrder(action, qty, price)
-                    order.tif = 'DAY'
-                    trade  = ib.placeOrder(contract, order)
-                    ib.sleep(2)
-
-                    from datetime import timedelta
-                    position = {**thesis, 'entry_date': datetime.now().strftime('%Y-%m-%d'),
-                                'entry_time': datetime.now().isoformat(), 'entry_price': price,
-                                'entry_qty': qty, 'entry_size_usd': round(size_usd, 2),
-                                'order_id': trade.order.orderId, 'status': 'open',
-                                'paper_trade': True, 'account': 'A_BASELINE',
-                                'learning_mode': 'no_learning',
-                                'deadline_date': (datetime.now() + timedelta(days=45)).strftime('%Y-%m-%d')}
-                    open_positions.append(position)
-                    executed.append(position)
-                    tg.send_trade_opened_labeled(thesis, {'qty': qty, 'limit_price': price,
-                                                  'status': trade.orderStatus.status}, account_value, 'A — BASELINE')
-                    print(f"  ✓ {action} {qty} {ticker} @ ${price}")
-                except Exception as ex:
-                    print(f"  Trade failed {ticker}: {ex}")
-
-            ib.disconnect()
-            import json as _j
-            with open(os.path.join(data_dir, 'open_positions.json'), 'w') as f:
-                _j.dump(open_positions, f, indent=2)
-
+            sys.path.insert(0, EXEC_DIR)
+            from execution_agent import run as execute_run
+            executed = execute_run() or []
         except Exception as e:
             print(f"  Execution failed: {e}")
+            import traceback; traceback.print_exc()
     else:
         print("[A-2/4] No approved trades.")
 

@@ -223,21 +223,54 @@ def check_delta(thesis, open_positions, size_pct):
 
 
 def validate_thesis(thesis, open_positions, account_value=100_000):
-    """Full validation with risk-based sizing"""
-    
-    # Calculate optimal position size
+    """
+    Full validation with risk-based sizing.
+
+    For OPTIONS theses (instrument='options'):
+      - position_size_pct is a placeholder for the portfolio checks (use the
+        max_risk pct directly — execution_agent computes actual contracts)
+      - Skip the share-based risk_per_share path; the underlying stop is still
+        used as the invalidation level (extracted from invalidation_conditions)
+        but contract sizing happens at execution time with live option prices.
+    """
+    instrument = (thesis.get('instrument') or 'stock').lower()
+
+    if instrument == 'options':
+        # Parse the underlying stop (used by monitor for invalidation level)
+        entry_price       = float(thesis.get('entry_price', 0))
+        invalidation_text = thesis.get('invalidation_conditions', '')
+        underlying_stop   = extract_stop_price(invalidation_text, entry_price)
+
+        thesis['position_size_pct'] = MAX_RISK_PER_TRADE_PCT  # 0.5% premium budget
+        thesis['calculated_stop']   = underlying_stop          # for the monitor
+        thesis['sizing_method']     = 'options_risk_based'
+        thesis['risk_per_share']    = None
+        thesis['max_risk_usd']      = round(account_value * MAX_RISK_PER_TRADE_PCT / 100, 2)
+
+        # Portfolio-level checks still apply: don't open duplicate names,
+        # don't blow past max open, don't overconcentrate sectors.
+        size_pct_for_portfolio = MAX_RISK_PER_TRADE_PCT
+        checks = [
+            check_duplicate(thesis, open_positions),
+            check_sector_concentration(thesis, open_positions, size_pct_for_portfolio),
+            check_open_count(open_positions),
+            check_correlation(thesis, open_positions),
+        ]
+        passed   = all(ok for ok, _ in checks)
+        messages = [f"{'✓' if ok else '✗'} {msg}" for ok, msg in checks]
+        return passed, messages
+
+    # ── Stock path (legacy) ───────────────────────────────────────────────
     size_pct, stop_price, sizing_method, risk_per_share = calculate_risk_based_size(
         thesis, account_value
     )
-    
-    # Update thesis with calculated size
+
     thesis['position_size_pct']  = size_pct
     thesis['calculated_stop']    = stop_price
     thesis['sizing_method']      = sizing_method
     thesis['risk_per_share']     = round(risk_per_share, 2) if risk_per_share else None
     thesis['max_risk_usd']       = round(account_value * MAX_RISK_PER_TRADE_PCT / 100, 2)
-    
-    # Run all checks
+
     checks = [
         check_duplicate(thesis, open_positions),
         check_position_size(size_pct),
