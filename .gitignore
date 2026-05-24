@@ -32,5 +32,5 @@ settings/
 settings_a/
 settings_b/
 
-# Plotus operational output (still written by report/plotus/generator.py)
+# Legacy operational output — defensive guard for any leftover files on the VPS
 reports/
