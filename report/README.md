@@ -69,7 +69,6 @@ report/
 ├── daily.py             python3 -m report.daily
 ├── weekly.py            python3 -m report.weekly
 ├── dashboard/           FastAPI live dashboard (reads SQLite + live IBKR)
-├── plotus/              Plotus / Instagram daily report (separate pipeline)
 ├── requirements.txt     pip install -r report/requirements.txt
 └── tests/test_stats.py  50+ unit tests
 ```

@@ -53,7 +53,6 @@ LEGACY_EMPTY_DIRS = [
     os.path.join(BASE_DIR, 'phase3'),
     os.path.join(BASE_DIR, 'dashboard'),
     os.path.join(BASE_DIR, 'reporting'),
-    # NOTE: not removing reports/ — Plotus generator still writes there.
 ]
 
 
