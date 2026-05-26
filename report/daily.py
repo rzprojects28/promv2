@@ -5,7 +5,7 @@ Usage:
     python3 -m report.daily
 
 Cron (fires after the trading run completes):
-    30 21 * * 1-5  cd ~/prometheus && /usr/bin/python3 -m report.daily
+    30 21 * * 1-5  cd ~/promv2 && /usr/bin/python3 -m report.daily
 
 What it does, in order:
     1. Read open + closed positions (data/account_a/*.json) and today's risk-gate output

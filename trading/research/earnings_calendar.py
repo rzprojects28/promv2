@@ -9,7 +9,7 @@ import requests
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
-load_dotenv(dotenv_path=os.path.expanduser('~/prometheus/.env'))
+load_dotenv(dotenv_path=os.path.expanduser('~/promv2/.env'))
 
 FMP_API_KEY = os.getenv('FMP_API_KEY', 'demo')
 

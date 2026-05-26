@@ -4,9 +4,9 @@ ib_insync/asyncio event loop conflicts with uvicorn.
 Prints a single JSON object to stdout.
 """
 import sys, os, json, math, time
-sys.path.insert(0, os.path.expanduser("~/prometheus/report/dashboard"))
+sys.path.insert(0, os.path.expanduser("~/promv2/report/dashboard"))
 
-BASE   = os.path.expanduser("~/prometheus")
+BASE   = os.path.expanduser("~/promv2")
 ACCT_A = os.path.join(BASE, "data", "account_a")
 
 try:

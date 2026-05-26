@@ -24,7 +24,7 @@ from datetime import datetime
 from typing import Iterable, Optional
 
 
-BASE_DIR = os.path.expanduser('~/prometheus')
+BASE_DIR = os.path.expanduser('~/promv2')
 DB_PATH  = os.path.join(BASE_DIR, 'data', 'prometheus.db')
 
 

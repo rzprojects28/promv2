@@ -22,7 +22,7 @@ from datetime import datetime
 import anthropic
 from dotenv import load_dotenv
 
-load_dotenv(dotenv_path=os.path.expanduser('~/prometheus/.env'))
+load_dotenv(dotenv_path=os.path.expanduser('~/promv2/.env'))
 # Allow `import telegram_alerts` (one level up in trading/) to keep working
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -37,7 +37,7 @@ IB_CLIENT_ID = int(os.getenv('IB_CLIENT_MONITOR', 4))
 
 # Data directory — override via PROMETHEUS_DATA_DIR env var.
 # Default for standalone runs points at the new data/account_a location.
-BASE_DIR     = os.path.expanduser('~/prometheus')
+BASE_DIR     = os.path.expanduser('~/promv2')
 DEFAULT_DATA = os.getenv(
     'PROMETHEUS_DATA_DIR',
     os.path.join(BASE_DIR, 'data', 'account_a'),

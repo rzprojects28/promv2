@@ -17,7 +17,7 @@ import os
 from typing import Tuple
 
 
-BASE_DIR     = os.path.expanduser('~/prometheus')
+BASE_DIR     = os.path.expanduser('~/promv2')
 DATA_DIR     = os.path.join(BASE_DIR, 'data')
 ACCT_A_DATA  = os.path.join(DATA_DIR, 'account_a')
 

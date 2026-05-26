@@ -6,8 +6,8 @@ Connects to IB Gateway on port 4002.
 Path layout (post-restructure):
   ACCOUNT_DIR  = trading/account_a/        (this file + config.json)
   TRADING_DIR  = trading/                  (research/, risk/, execution/, monitor/, journal/)
-  BASE_DIR     = ~/prometheus              (repo root)
-  DATA_DIR     = ~/prometheus/data/account_a/   (live JSON state)
+  BASE_DIR     = ~/promv2              (repo root)
+  DATA_DIR     = ~/promv2/data/account_a/   (live JSON state)
 """
 import json
 import os
@@ -40,7 +40,7 @@ os.environ['ACCOUNT_LABEL']       = 'BASELINE'
 os.environ['LEARNING_MODE']       = 'no_learning'
 
 from dotenv import load_dotenv
-load_dotenv(dotenv_path=os.path.expanduser('~/prometheus/.env'))
+load_dotenv(dotenv_path=os.path.expanduser('~/promv2/.env'))
 
 
 def load_json(path, default):
@@ -170,7 +170,7 @@ def _run_monitor(data_dir):
     import telegram_alerts as tg
     import anthropic
     from dotenv import load_dotenv
-    load_dotenv(dotenv_path=os.path.expanduser('~/prometheus/.env'))
+    load_dotenv(dotenv_path=os.path.expanduser('~/promv2/.env'))
 
     open_positions   = load_json(os.path.join(data_dir, 'open_positions.json'), [])
     closed_positions = load_json(os.path.join(data_dir, 'closed_positions.json'), [])
@@ -307,7 +307,7 @@ def _run_journal(data_dir, config_path, learning_mode):
     """Run journal agent against account-specific data"""
     import json, anthropic
     from dotenv import load_dotenv
-    load_dotenv(dotenv_path=os.path.expanduser('~/prometheus/.env'))
+    load_dotenv(dotenv_path=os.path.expanduser('~/promv2/.env'))
     import telegram_alerts as tg
 
     closed     = load_json(os.path.join(data_dir, 'closed_positions.json'), [])

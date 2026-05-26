@@ -8,7 +8,7 @@ import math
 from datetime import datetime
 from dotenv import load_dotenv
 
-load_dotenv(dotenv_path=os.path.expanduser('~/prometheus/.env'))
+load_dotenv(dotenv_path=os.path.expanduser('~/promv2/.env'))
 
 
 def fetch_prices(tickers: list, ib_port: int = 4002) -> dict:

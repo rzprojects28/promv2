@@ -11,7 +11,7 @@ from datetime import datetime
 import anthropic
 from dotenv import load_dotenv
 
-load_dotenv(dotenv_path=os.path.expanduser('~/prometheus/.env'))
+load_dotenv(dotenv_path=os.path.expanduser('~/promv2/.env'))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import telegram_alerts as tg
