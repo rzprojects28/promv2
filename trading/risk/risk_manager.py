@@ -308,7 +308,7 @@ def run():
         from ib_insync import IB
         from dotenv import load_dotenv
         import os
-        load_dotenv(dotenv_path=os.path.expanduser('~/prometheus/.env'))
+        load_dotenv(dotenv_path=os.path.expanduser('~/promv2/.env'))
         ib = IB()
         ib.connect(os.getenv('IB_HOST','127.0.0.1'), int(os.getenv('IB_PORT',4002)), clientId=10)
         for av in ib.accountValues():

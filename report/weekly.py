@@ -5,7 +5,7 @@ Usage:
     python3 -m report.weekly
 
 Cron (fires Sat 08:00 SGT, after Fri US close):
-    0 8 * * 6  cd ~/prometheus && /usr/bin/python3 -m report.weekly
+    0 8 * * 6  cd ~/promv2 && /usr/bin/python3 -m report.weekly
 
 Window: Mon 00:00 → Sun 23:59 SGT of the most recently completed week
         (see report.stats.week_bounds_sgt for the full rule).

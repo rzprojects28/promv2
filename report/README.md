@@ -33,10 +33,10 @@ python3 -m report.weekly     # per-account weekly summary (Mon→Sun SGT window)
 
 ```cron
 # Daily — ~30min after trading run completes
-30 21 * * 1-5  cd ~/prometheus && /usr/bin/python3 -m report.daily   >> data/logs/daily.log  2>&1
+30 21 * * 1-5  cd ~/promv2 && /usr/bin/python3 -m report.daily   >> data/logs/daily.log  2>&1
 
 # Weekly — Sat 08:00 SGT, after Fri US close
-0 8 * * 6      cd ~/prometheus && /usr/bin/python3 -m report.weekly  >> data/logs/weekly.log 2>&1
+0 8 * * 6      cd ~/promv2 && /usr/bin/python3 -m report.weekly  >> data/logs/weekly.log 2>&1
 ```
 
 ## Daily message contains

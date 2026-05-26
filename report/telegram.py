@@ -13,7 +13,7 @@ import os
 # TELEGRAM_CHAT_ID are already exported in the shell or set by cron.
 try:
     from dotenv import load_dotenv
-    load_dotenv(dotenv_path=os.path.expanduser('~/prometheus/.env'))
+    load_dotenv(dotenv_path=os.path.expanduser('~/promv2/.env'))
 except ImportError:
     pass
 

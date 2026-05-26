@@ -44,7 +44,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-BASE          = os.path.expanduser("~/prometheus")
+BASE          = os.path.expanduser("~/promv2")
 DATA_A        = os.path.join(BASE, "data", "account_a")
 RESEARCH_DATA = os.path.join(BASE, "trading", "research", "data")
 ACCOUNT_CODE  = "A"

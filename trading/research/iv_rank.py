@@ -13,7 +13,7 @@ import math
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
-load_dotenv(dotenv_path=os.path.expanduser('~/prometheus/.env'))
+load_dotenv(dotenv_path=os.path.expanduser('~/promv2/.env'))
 
 
 def fetch_iv_data(tickers: list, ib_port: int = 4002) -> dict:

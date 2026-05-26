@@ -65,7 +65,7 @@ def run_all():
     print(f"\n{'=' * 60}")
     print(f"  RESEARCH RUN COMPLETE — {elapsed}s elapsed")
     print(f"  Trade ideas generated: {count}")
-    print(f"  Results → ~/prometheus/trading/research/data/trade_theses.json")
+    print(f"  Results → ~/promv2/trading/research/data/trade_theses.json")
     print(f"{'=' * 60}\n")
  
  
